@@ -91,6 +91,23 @@ def ver_choferes():
         print("Error: ")
         print(e)
         
+def insertar_chofer():
+    nombre = input("Escribe el nombre del nuevo chofer: ")
+    telefono = int(input("Escribe el telefono del nuevo chofer: "))
+    licencia = input("Escribe la licencia del nuevo chofer: ")
+    tipo_licencia = input("Escribe el tipo de licencia del nuevo chofer: ")
+    vigen_licencia = input("Escribe la vigencia de la licencia (AAAA-MM-DD): ")
+    estatus = input("Escribe el estatus del nuevo chofer: ")
+    try:
+        chofer_dao = ChoferDAO()
+        id_chofer = chofer_dao.obtener_ultimo_id() + 1
+        chofer = Chofer(id_chofer, nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
+        chofer_dao.insertar(chofer)
+        print("Inserción realizada con éxito")
+    except Exception as e:
+        print("Error al insertar un nuevo chofer")
+        print(e)
+
 def main():
     print("=== SISTEMA UNIRUTA ===")
     print("Menú de opciones")
