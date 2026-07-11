@@ -49,6 +49,30 @@ class ChoferDAO:
         conexion.commit()
         cursor.close()
         conexion.close()
+        
+    def actualizar(self, chofer):
+        conexion = Conexion.obtener_conexion()
+        cursor = conexion.cursor()
+
+        sql ="""
+        UPDATE choferes
+        SET nombre = %s, telefono = %s, licencia = %s, tipo_licencia = %s, vigen_licencia = %s, estatus = %s
+        WHERE id = %s
+        """
+
+        cursor.execute(
+            sql,
+            (chofer.nombre,
+            chofer.telefono,
+            chofer.licencia,
+            chofer.tipo_licencia,
+            chofer.vigen_licencia,
+            chofer.estatus,
+            chofer.id)
+        )
+        conexion.commit()
+        cursor.close()
+        conexion.close()
     
     def obtener_ultimo_id(self):
         conexion = Conexion.obtener_conexion()

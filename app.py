@@ -108,6 +108,27 @@ def insertar_chofer():
         print("Error al insertar un nuevo chofer")
         print(e)
 
+def actualizar_chofer():
+    print("Selecciona al usuario a actualizar")
+    try:
+        chofer_dao = ChoferDAO()
+        ver_choferes()
+        id = int(input("Escribe el id del chofer a actualizar: "))
+        nombre = input("Escribe el nuevo nombre")
+        telefono = input("Escribe el nuevo telefono")
+        licencia = input("Escribe la nueva licencia")
+        tipo_licencia = input("Escribe el nuevo tipo de licencia")
+        vigen_licencia = input("Escribir la nueva vigencia de la licencia: ")
+        estatus = input("Escribir el nuevo estatus del chofer")
+        chofer = Chofer(id, nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
+        chofer_dao.actualizar(chofer)
+        print(f"El usuario {id} se ha actualizado exitosamente")
+
+    except Exception as e:
+        print("Error al actualizar un usuario")
+        print(e)
+
+
 def main():
     print("=== SISTEMA UNIRUTA ===")
     print("Menú de opciones")
