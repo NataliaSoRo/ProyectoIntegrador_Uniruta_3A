@@ -127,6 +127,18 @@ def actualizar_chofer():
     except Exception as e:
         print("Error al actualizar un usuario")
         print(e)
+        
+def eliminar_chofer():
+    try:
+        chofer_dao = ChoferDAO()
+        print("Lista de choferes disponibles: ")
+        ver_choferes()
+        id = int(input("Escribe el id del chofer a eliminar: "))
+        chofer_dao.eliminar(id)
+        print(f"El chofer {id} ha sido eliminado con éxito")
+    except Exception as e:
+        print(f"Error al eliminar el chofer {id}")
+        print(e)
 
 
 def main():

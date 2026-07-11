@@ -73,6 +73,18 @@ class ChoferDAO:
         conexion.commit()
         cursor.close()
         conexion.close()
+        
+    def eliminar(self, chofer_id):
+        conexion = Conexion.obtener_conexion()
+        cursor = conexion.cursor()
+
+        cursor.execute(
+            "DELETE FROM choferes WHERE id = %s",
+            (chofer_id,)
+            )
+        conexion.commit()
+        cursor.close()
+        conexion.close()
     
     def obtener_ultimo_id(self):
         conexion = Conexion.obtener_conexion()
