@@ -48,6 +48,29 @@ class RutaDAO:
         cursor.close()
         conexion.close()
         
+    def actualizar(self, ruta):
+        conexion = Conexion.obtener_conexion()
+        cursor = conexion.cursor()
+
+        sql ="""
+        UPDATE ruta
+        SET nombre = %s, origen = %s, destino = %s, tiempo_estimado = %s
+        WHERE id = %s
+        """
+
+        cursor.execute(
+            sql,
+            (ruta.nombre,
+            ruta.origen,
+            ruta.destino,
+            ruta.tiempo_estimado,
+            ruta.id)
+        )
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+        
+        
     def obtener_ultimo_id(self):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()

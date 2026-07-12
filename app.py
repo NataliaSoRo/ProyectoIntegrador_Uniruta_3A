@@ -202,21 +202,19 @@ def insertar_rutas():
 def actualizar_rutas():
     print("Selecciona al usuario a actualizar")
     try:
-        chofer_dao = ChoferDAO()
-        ver_choferes()
-        id = int(input("Escribe el id del chofer a actualizar: "))
-        nombre = input("Escribe el nuevo nombre")
-        telefono = input("Escribe el nuevo telefono")
-        licencia = input("Escribe la nueva licencia")
-        tipo_licencia = input("Escribe el nuevo tipo de licencia")
-        vigen_licencia = input("Escribir la nueva vigencia de la licencia: ")
-        estatus = input("Escribir el nuevo estatus del chofer")
-        chofer = Chofer(id, nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
-        chofer_dao.actualizar(chofer)
-        print(f"El usuario {id} se ha actualizado exitosamente")
+        ruta_dao = RutaDAO()
+        ver_rutas()
+        id = int(input("Escribe el id de la ruta a actualizar: "))
+        nombre = input("Escribe el nuevo nombre: ")
+        origen = input("Escribe el nuevo origen: ")
+        destino = input("Escribe el nuevo destino: ")
+        tiempo_estimado = input("Escribe el nuevo tiempo estimado: ")
+        ruta = Ruta (id, nombre, origen, destino, tiempo_estimado)
+        ruta_dao.actualizar(ruta)
+        print(f"La ruta {id} se ha actualizado exitosamente")
 
     except Exception as e:
-        print("Error al actualizar un usuario")
+        print("Error al actualizar una ruta")
         print(e)
         
 def eliminar_rutas():
