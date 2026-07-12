@@ -185,17 +185,15 @@ def ver_rutas():
         print(e)
         
 def insertar_rutas():
-    nombre = input("Escribe el nombre del nuevo chofer: ")
-    telefono = int(input("Escribe el telefono del nuevo chofer: "))
-    licencia = input("Escribe la licencia del nuevo chofer: ")
-    tipo_licencia = input("Escribe el tipo de licencia del nuevo chofer: ")
-    vigen_licencia = input("Escribe la vigencia de la licencia (AAAA-MM-DD): ")
-    estatus = input("Escribe el estatus del nuevo chofer: ")
+    nombre = input("Escribe el nombre de la ruta nueva: ")
+    origen = input("Escribe el origen de la ruta nueva: ")
+    destino = input("Escribe el destino de la ruta nueva: ")
+    tiempo_estimado = input("Escribe el tiempo estimado de la ruta nueva: ")
     try:
-        chofer_dao = ChoferDAO()
-        id_chofer = chofer_dao.obtener_ultimo_id() + 1
-        chofer = Chofer(id_chofer, nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
-        chofer_dao.insertar(chofer)
+        ruta_dao = RutaDAO()
+        id_ruta = ruta_dao.obtener_ultimo_id() + 1
+        ruta = Ruta(id_ruta, nombre, origen, destino, tiempo_estimado)
+        ruta_dao.insertar(ruta)
         print("Inserción realizada con éxito")
     except Exception as e:
         print("Error al insertar un nuevo chofer")

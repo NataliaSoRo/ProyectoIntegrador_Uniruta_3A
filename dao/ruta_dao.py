@@ -25,3 +25,39 @@ class RutaDAO:
         conexion.close()
 
         return rutas
+    
+    def insertar(self, ruta):
+        conexion = Conexion.obtener_conexion()
+        cursor = conexion.cursor()
+        sql ="""
+        INSERT INTO ruta (id, nombre, origen, destino, tiempo_estimado)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+
+        cursor.execute(
+            sql,
+            (ruta.id,
+            ruta.nombre,
+            ruta.origen,
+            ruta.destino,
+            ruta.tiempo_estimado
+            )
+        )
+
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+        
+    def obtener_ultimo_id(self):
+        conexion = Conexion.obtener_conexion()
+        cursor = conexion.cursor()
+
+        cursor.execute("SELECT id FROM ruta ORDER BY id DESC")
+        resultado = cursor.fetchone()
+
+        cursor.close()
+        conexion.close()
+
+        if resultado is None:
+            return 0
+        return resultado[0]
