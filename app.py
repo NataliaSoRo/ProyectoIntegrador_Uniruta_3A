@@ -61,6 +61,22 @@ def menu_choferes():
         case 4:
             eliminar_chofer()
  
+def menu_rutas():
+    print("1. Ver todas las rutas")
+    print("2. Insertar una ruta nueva")
+    print("3. Actualizar una ruta disponible")
+    print("4. Eliminar una ruta disponible")
+    opcion = int(input("Seleccionar una opcion (1-4): "))
+
+    match opcion:
+        case 1:
+            ver_rutas()
+        case 2:
+            insertar_rutas()
+        case 3:
+            actualizar_rutas()
+        case 4:
+            eliminar_rutas()
          
 #============================================================#
 from dao.chofer_dao import ChoferDAO
@@ -140,12 +156,90 @@ def eliminar_chofer():
         print(f"Error al eliminar el chofer {id}")
         print(e)
 
+#============================================================#
+from dao.ruta_dao import RutaDAO
+from models.ruta import Ruta
+
+def ver_rutas():
+    try:
+        ruta_dao = RutaDAO()
+
+        rutas = ruta_dao.obtener_todos()
+
+        print("=== Lista de rutas ===")
+
+        if len(rutas) == 0:
+            print("No hay rutas registradas.")
+        else:
+            for ruta in rutas: 
+                print("====================================")
+                print(
+                    f"ID: {ruta.id}, Nombre: {ruta.nombre}, "
+                    f"Origen: {ruta.origen}, Destino: {ruta.destino}, "
+                    f"Tiempo estimado: {ruta.tiempo_estimado}"
+                )
+                print("====================================")
+        print("\n Conexión exitosa a la base de datos")
+    except Exception as e:
+        print("Error: ")
+        print(e)
+        
+def insertar_rutas():
+    nombre = input("Escribe el nombre del nuevo chofer: ")
+    telefono = int(input("Escribe el telefono del nuevo chofer: "))
+    licencia = input("Escribe la licencia del nuevo chofer: ")
+    tipo_licencia = input("Escribe el tipo de licencia del nuevo chofer: ")
+    vigen_licencia = input("Escribe la vigencia de la licencia (AAAA-MM-DD): ")
+    estatus = input("Escribe el estatus del nuevo chofer: ")
+    try:
+        chofer_dao = ChoferDAO()
+        id_chofer = chofer_dao.obtener_ultimo_id() + 1
+        chofer = Chofer(id_chofer, nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
+        chofer_dao.insertar(chofer)
+        print("Inserción realizada con éxito")
+    except Exception as e:
+        print("Error al insertar un nuevo chofer")
+        print(e)
+
+def actualizar_rutas():
+    print("Selecciona al usuario a actualizar")
+    try:
+        chofer_dao = ChoferDAO()
+        ver_choferes()
+        id = int(input("Escribe el id del chofer a actualizar: "))
+        nombre = input("Escribe el nuevo nombre")
+        telefono = input("Escribe el nuevo telefono")
+        licencia = input("Escribe la nueva licencia")
+        tipo_licencia = input("Escribe el nuevo tipo de licencia")
+        vigen_licencia = input("Escribir la nueva vigencia de la licencia: ")
+        estatus = input("Escribir el nuevo estatus del chofer")
+        chofer = Chofer(id, nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
+        chofer_dao.actualizar(chofer)
+        print(f"El usuario {id} se ha actualizado exitosamente")
+
+    except Exception as e:
+        print("Error al actualizar un usuario")
+        print(e)
+        
+def eliminar_rutas():
+    try:
+        chofer_dao = ChoferDAO()
+        print("Lista de choferes disponibles: ")
+        ver_choferes()
+        id = int(input("Escribe el id del chofer a eliminar: "))
+        chofer_dao.eliminar(id)
+        print(f"El chofer {id} ha sido eliminado con éxito")
+    except Exception as e:
+        print(f"Error al eliminar el chofer {id}")
+        print(e)
+
 
 def main():
     print("=== SISTEMA UNIRUTA ===")
     print("Menú de opciones")
     print  ("1. Unidades")
     print("2. Choferes")
+    print("3. Rutas")
     
     opc = int(input("Selecciona una opcion: "))
 
@@ -153,7 +247,9 @@ def main():
         case 1:
             menu_unidades()
         case 2:
-            menu_choferes()    
+            menu_choferes()  
+        case 3:
+            menu_rutas() 
  
 
 
