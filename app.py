@@ -219,14 +219,14 @@ def actualizar_rutas():
         
 def eliminar_rutas():
     try:
-        chofer_dao = ChoferDAO()
-        print("Lista de choferes disponibles: ")
-        ver_choferes()
-        id = int(input("Escribe el id del chofer a eliminar: "))
-        chofer_dao.eliminar(id)
-        print(f"El chofer {id} ha sido eliminado con éxito")
+        ruta_dao = RutaDAO()
+        print("Lista de rutas disponibles: ")
+        ver_rutas()
+        id = int(input("Escribe el id de la ruta a eliminar: "))
+        ruta_dao.eliminar(id)
+        print(f"La ruta {id} ha sido eliminado con éxito")
     except Exception as e:
-        print(f"Error al eliminar el chofer {id}")
+        print(f"Error al eliminar la ruta {id}")
         print(e)
 
 

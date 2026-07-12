@@ -70,6 +70,18 @@ class RutaDAO:
         cursor.close()
         conexion.close()
         
+    def eliminar(self, ruta_id):
+        conexion = Conexion.obtener_conexion()
+        cursor = conexion.cursor()
+
+        cursor.execute(
+            "DELETE FROM ruta WHERE id = %s",
+            (ruta_id,)
+            )
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+        
         
     def obtener_ultimo_id(self):
         conexion = Conexion.obtener_conexion()
