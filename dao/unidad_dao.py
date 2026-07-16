@@ -27,3 +27,68 @@ class UnidadDAO:
         conexion.close()
 
         return unidades
+    
+    def insertar(self, unidad):
+        conexion = Conexion.obtener_conexion()
+        cursor = conexion.cursor()
+        sql ="""
+        INSERT INTO unidad (id, noeconomico, placas, modelo, marca, año, kilometraje, estatus)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+
+        cursor.execute(
+            sql,
+            (unidad.id,
+            unidad.noeconomico,
+            unidad.placas,
+            unidad.modelo,
+            unidad.marca,
+            unidad.año,
+            unidad.kilometraje,
+            unidad.estatus
+            )
+        )
+
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+
+    def actualizar(self, unidad):
+        conexion = Conexion.obtener_conexion()
+        cursor = conexion.cursor()
+
+        sql ="""
+        UPDATE unidad
+        SET noeconomico = %s, placas = %s, modelo = %s, marca = %s, año = %s, kilometraje = %s, estatus = %s
+        WHERE id = %s
+        """
+
+        cursor.execute(
+            sql,
+            (unidad.noeconomico,
+            unidad.placas,
+            unidad.modelo,
+            unidad.marca,
+            unidad.año,
+            unidad.kilometraje,
+            unidad.estatus,
+            unidad.id
+            )
+        )
+
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+
+    def eliminar(self, unidad_id):
+        conexion = Conexion.obtener_conexion()
+        cursor = conexion.cursor()
+
+        cursor.execute(
+            "DELETE FROM unidad WHERE id = %s",
+            (unidad_id,)
+            )
+
+        conexion.commit()
+        cursor.close()
+        conexion.close()

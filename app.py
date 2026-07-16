@@ -26,13 +26,86 @@ def ver_unidades():
           print("Error al ver las unidades")
           print(e)
 
+def insertar_unidad():
+    try:
+        noeconomico = input("Número económico: ")
+        placas = input("Placas: ")
+        modelo = input("Modelo: ")
+        marca = input("Marca: ")
+        año = int(input("Año: "))
+        kilometraje = int(input("Kilometraje: "))
+        estatus = input("Estatus: ")
+
+        unidad = Unidad(
+            noeconomico=noeconomico,
+            placas=placas,
+            modelo=modelo,
+            marca=marca,
+            año=año,
+            kilometraje=kilometraje,
+            estatus=estatus
+        )
+
+        unidad_dao = UnidadDAO()
+        unidad_dao.insertar(unidad)
+
+        print("Unidad insertada correctamente.")
+
+    except Exception as e:
+        print("Error al insertar la unidad")
+        print(e)
+
+def actualizar_unidad():
+    try:
+        id = int(input("ID de la unidad: "))
+        noeconomico = input("Nuevo número económico: ")
+        placas = input("Nuevas placas: ")
+        modelo = input("Nuevo modelo: ")
+        marca = input("Nueva marca: ")
+        año = int(input("Nuevo año: "))
+        kilometraje = int(input("Nuevo kilometraje: "))
+        estatus = input("Nuevo estatus: ")
+
+        unidad = Unidad(
+            id=id,
+            noeconomico=noeconomico,
+            placas=placas,
+            modelo=modelo,
+            marca=marca,
+            año=año,
+            kilometraje=kilometraje,
+            estatus=estatus
+        )
+
+        unidad_dao = UnidadDAO()
+        unidad_dao.actualizar(unidad)
+
+        print("Unidad actualizada correctamente.")
+
+    except Exception as e:
+        print("Error al actualizar la unidad")
+        print(e)
+
+def eliminar_unidad():
+    try:
+        id = int(input("ID de la unidad a eliminar: "))
+
+        unidad_dao = UnidadDAO()
+        unidad_dao.eliminar(id)
+
+        print("Unidad eliminada correctamente.")
+
+    except Exception as e:
+        print("Error al eliminar la unidad")
+        print(e)
+
 def menu_unidades():
     print("1. Ver todas las unidades")
     print("2. Insertar una unidad nueva")
     print("3. Actualizar una unidad disponible")
     print("4. Eliminar una unidad disponible")
     opcion = int(input("Seleccionar una opcion (1-4): "))
-
+    
     match opcion:
         case 1:
             ver_unidades()
@@ -42,6 +115,121 @@ def menu_unidades():
             actualizar_unidad()
         case 4:
             eliminar_unidad()
+
+from dao.viaje_dao import ViajeDAO
+from models.viaje import Viaje
+
+def ver_viajes():
+    try:
+        viaje_dao = ViajeDAO()
+        viajes = viaje_dao.obtener_todos()
+
+        print("=== Viajes registrados ===")
+
+        if len(viajes) == 0:
+            print("No hay viajes registrados.")
+        else:
+            for viaje in viajes:
+                print("====================================")
+                print(
+                    f"ID: {viaje.viaj_id}, Origen: {viaje.viaj_origen}, "
+                    f"Destino: {viaje.viaj_destino}, Fecha: {viaje.viaj_fecha}, "
+                    f"Hora: {viaje.viaj_hora}, Unidad ID: {viaje.viaj_unid_id}, "
+                    f"Estatus: {viaje.viaj_estatus}"
+                )
+
+    except Exception as e:
+        print("Error al ver los viajes")
+        print(e)
+
+def insertar_viaje():
+    try:
+        origen = input("Origen: ")
+        destino = input("Destino: ")
+        fecha = input("Fecha (AAAA-MM-DD): ")
+        hora = input("Hora (HH:MM:SS): ")
+        unid_id = int(input("ID de la unidad: "))
+        estatus = input("Estatus: ")
+
+        viaje = Viaje(
+            viaj_origen=origen,
+            viaj_destino=destino,
+            viaj_fecha=fecha,
+            viaj_hora=hora,
+            viaj_unid_id=unid_id,
+            viaj_estatus=estatus
+        )
+
+        viaje_dao = ViajeDAO()
+        viaje_dao.insertar(viaje)
+
+        print("Viaje insertado correctamente.")
+
+    except Exception as e:
+        print("Error al insertar el viaje")
+        print(e)
+
+def actualizar_viaje():
+    try:
+        id = int(input("ID del viaje: "))
+        origen = input("Nuevo origen: ")
+        destino = input("Nuevo destino: ")
+        fecha = input("Nueva fecha (AAAA-MM-DD): ")
+        hora = input("Nueva hora (HH:MM:SS): ")
+        unid_id = int(input("Nuevo ID de la unidad: "))
+        estatus = input("Nuevo estatus: ")
+
+        viaje = Viaje(
+            viaj_id=id,
+            viaj_origen=origen,
+            viaj_destino=destino,
+            viaj_fecha=fecha,
+            viaj_hora=hora,
+            viaj_unid_id=unid_id,
+            viaj_estatus=estatus
+        )
+
+        viaje_dao = ViajeDAO()
+        viaje_dao.actualizar(viaje)
+
+        print("Viaje actualizado correctamente.")
+
+    except Exception as e:
+        print("Error al actualizar el viaje")
+        print(e)
+
+def eliminar_viaje():
+    try:
+        id = int(input("ID del viaje a eliminar: "))
+
+        viaje_dao = ViajeDAO()
+        viaje_dao.eliminar(id)
+
+        print("Viaje eliminado correctamente.")
+
+    except Exception as e:
+        print("Error al eliminar el viaje")
+        print(e)
+
+def menu_viajes():
+    print("=== Menú de viajes ===")
+    print("1. Ver viajes")
+    print("2. Insertar viaje")
+    print("3. Actualizar viaje")
+    print("4. Eliminar viaje")
+
+    opcion = int(input("Seleccionar una opcion (1-4): "))
+
+    match opcion:
+        case 1:
+            ver_viajes()
+        case 2:
+            insertar_viaje()
+        case 3:
+            actualizar_viaje()
+        case 4:
+            eliminar_viaje()
+
 
 
 def menu_choferes():
@@ -233,10 +421,11 @@ def eliminar_rutas():
 def main():
     print("=== SISTEMA UNIRUTA ===")
     print("Menú de opciones")
-    print  ("1. Unidades")
+    print("1. Unidades")
     print("2. Choferes")
     print("3. Rutas")
-    
+    print("4. Viajes")
+
     opc = int(input("Selecciona una opcion: "))
 
     match opc:
@@ -246,6 +435,8 @@ def main():
             menu_choferes()  
         case 3:
             menu_rutas() 
+        case 4:
+            menu_viajes()
  
 
 
