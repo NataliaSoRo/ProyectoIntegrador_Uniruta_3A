@@ -1,5 +1,7 @@
 from dao.unidad_dao import UnidadDAO
 from models.unidad import Unidad
+from dao.viaje_dao import ViajeDAO
+from models.viaje import Viaje
 
 def ver_unidades():
      try:
@@ -37,6 +39,7 @@ def insertar_unidad():
         estatus = input("Estatus: ")
 
         unidad = Unidad(
+            id=None,
             noeconomico=noeconomico,
             placas=placas,
             modelo=modelo,
@@ -132,10 +135,10 @@ def ver_viajes():
             for viaje in viajes:
                 print("====================================")
                 print(
-                    f"ID: {viaje.viaj_id}, Origen: {viaje.viaj_origen}, "
-                    f"Destino: {viaje.viaj_destino}, Fecha: {viaje.viaj_fecha}, "
-                    f"Hora: {viaje.viaj_hora}, Unidad ID: {viaje.viaj_unid_id}, "
-                    f"Estatus: {viaje.viaj_estatus}"
+                    f"ID: {viaje.id}, Origen: {viaje.origen}, "
+                    f"Destino: {viaje.destino}, Fecha: {viaje.fecha}, "
+                    f"Hora: {viaje.hora}, Unidad ID: {viaje.unidad}, "
+                    f"Estatus: {viaje.estatus}"
                 )
 
     except Exception as e:
@@ -143,61 +146,56 @@ def ver_viajes():
         print(e)
 
 def insertar_viaje():
-    try:
-        origen = input("Origen: ")
-        destino = input("Destino: ")
-        fecha = input("Fecha (AAAA-MM-DD): ")
-        hora = input("Hora (HH:MM:SS): ")
-        unid_id = int(input("ID de la unidad: "))
-        estatus = input("Estatus: ")
+    print("Insertar viaje")
 
-        viaje = Viaje(
-            viaj_origen=origen,
-            viaj_destino=destino,
-            viaj_fecha=fecha,
-            viaj_hora=hora,
-            viaj_unid_id=unid_id,
-            viaj_estatus=estatus
-        )
+    origen = input("Origen: ")
+    destino = input("Destino: ")
+    fecha = input("Fecha (AAAA-MM-DD): ")
+    hora = input("Hora (HH:MM:SS): ")
+    unidad = int(input("ID de la unidad: "))
+    estatus = input("Estatus: ")
 
-        viaje_dao = ViajeDAO()
-        viaje_dao.insertar(viaje)
+    viaje = Viaje(
+        origen=origen,
+        destino=destino,
+        fecha=fecha,
+        hora=hora,
+        unidad=unidad,
+        estatus=estatus
+    )
 
-        print("Viaje insertado correctamente.")
+    viaje_dao = ViajeDAO()
+    viaje_dao.insertar_viaje(viaje)
 
-    except Exception as e:
-        print("Error al insertar el viaje")
-        print(e)
+    print("Viaje registrado correctamente.")
 
 def actualizar_viaje():
-    try:
-        id = int(input("ID del viaje: "))
-        origen = input("Nuevo origen: ")
-        destino = input("Nuevo destino: ")
-        fecha = input("Nueva fecha (AAAA-MM-DD): ")
-        hora = input("Nueva hora (HH:MM:SS): ")
-        unid_id = int(input("Nuevo ID de la unidad: "))
-        estatus = input("Nuevo estatus: ")
+      print("selecciona el viaje a actualizar")
 
-        viaje = Viaje(
-            viaj_id=id,
-            viaj_origen=origen,
-            viaj_destino=destino,
-            viaj_fecha=fecha,
-            viaj_hora=hora,
-            viaj_unid_id=unid_id,
-            viaj_estatus=estatus
-        )
+      id = int(input("ID del viaje a actualizar: "))
+      origen = input("Nuevo origen: ")
+      destino = input("Nuevo destino: ")
+      fecha = input("Nueva fecha (AAAA-MM-DD): ")
+      hora = input("Nueva hora (HH:MM:SS): ")
+      unidad = int(input("Nuevo ID de la unidad: "))
+      estatus = input("Nuevo estatus: ")
+      
+      viaje = Viaje(
+        id=id,
+        origen=origen,
+        destino=destino,
+        fecha=fecha,
+        hora=hora,
+        unidad=unidad,
+        estatus=estatus
+      )
+    
+      viaje_dao = ViajeDAO()
+      viaje_dao.actualizar(viaje)
+    
+      print("Viaje actualizado correctamente.")
 
-        viaje_dao = ViajeDAO()
-        viaje_dao.actualizar(viaje)
-
-        print("Viaje actualizado correctamente.")
-
-    except Exception as e:
-        print("Error al actualizar el viaje")
-        print(e)
-
+    
 def eliminar_viaje():
     try:
         id = int(input("ID del viaje a eliminar: "))
