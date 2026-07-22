@@ -150,7 +150,6 @@ def insertar_viaje():
         hora = input("Hora (HH:MM:SS): ")
         unid_id = int(input("ID de la unidad: "))
         estatus = input("Estatus: ")
-
         viaje = Viaje(
             viaj_origen=origen,
             viaj_destino=destino,
@@ -417,6 +416,97 @@ def eliminar_rutas():
         print(f"Error al eliminar la ruta {id}")
         print(e)
 
+#============================================================#
+from dao.pagos_dao import PagoDAO
+from models.pago import Pago
+
+def ver_pagos():
+    try:
+        pago_dao = PagoDAO()
+
+        pagos = pago_dao.obtener_todos()
+
+        print("=== Lista de pagos ===")
+
+        if len(pagos) == 0:
+            print("No hay pagos registradas.")
+        else:
+            for pagos in pagos: 
+                print("====================================")
+                print(
+                    f"ID: {pagos.id_pagos}, ID de viaje: {pagos.id_viaje}, "
+                    f"ID de chofer: {pagos.id_chofer}, Pago inicial: {pagos.pago_inicial}, "
+                    f"Pago final: {pagos.pago_final}, El pago total acumulado: {pagos.pago_total_acumulado}, "
+                    f"Metodo del pago {pagos.metodo_pago}, Periodo del pago: {pagos.periodo_pago}"
+                )
+                print("====================================")
+        print("\n Conexión exitosa a la base de datos")
+    except Exception as e:
+        print("Error: ")
+        print(e)
+        
+def insertar_pagos():
+    nombre = input("Escribe el nombre de la ruta nueva: ")
+    origen = input("Escribe el origen de la ruta nueva: ")
+    destino = input("Escribe el destino de la ruta nueva: ")
+    tiempo_estimado = input("Escribe el tiempo estimado de la ruta nueva: ")
+    try:
+        ruta_dao = RutaDAO()
+        id_ruta = ruta_dao.obtener_ultimo_id() + 1
+        ruta = Ruta(id_ruta, nombre, origen, destino, tiempo_estimado)
+        ruta_dao.insertar(ruta)
+        print("Inserción realizada con éxito")
+    except Exception as e:
+        print("Error al insertar un nuevo chofer")
+        print(e)
+
+def actualizar_pagos():
+    print("Selecciona al usuario a actualizar")
+    try:
+        ruta_dao = RutaDAO()
+        ver_rutas()
+        id = int(input("Escribe el id de la ruta a actualizar: "))
+        nombre = input("Escribe el nuevo nombre: ")
+        origen = input("Escribe el nuevo origen: ")
+        destino = input("Escribe el nuevo destino: ")
+        tiempo_estimado = input("Escribe el nuevo tiempo estimado: ")
+        ruta = Ruta (id, nombre, origen, destino, tiempo_estimado)
+        ruta_dao.actualizar(ruta)
+        print(f"La ruta {id} se ha actualizado exitosamente")
+
+    except Exception as e:
+        print("Error al actualizar una ruta")
+        print(e)
+        
+def eliminar_pagos():
+    try:
+        ruta_dao = RutaDAO()
+        print("Lista de rutas disponibles: ")
+        ver_rutas()
+        id = int(input("Escribe el id de la ruta a eliminar: "))
+        ruta_dao.eliminar(id)
+        print(f"La ruta {id} ha sido eliminado con éxito")
+    except Exception as e:
+        print(f"Error al eliminar la ruta {id}")
+        print(e)
+        
+def menu_pagos():
+    print("1. Ver todos los pagos")
+    print("2. Insertar un pago nueva")
+    print("3. Actualizar un pago")
+    print("4. Eliminar un pago")
+    opcion = int(input("Seleccionar una opcion (1-4): "))
+    
+    match opcion:
+        case 1:
+            ver_pagos()
+        case 2:
+            insertar_unidad()
+        case 3:
+            actualizar_unidad()
+        case 4:
+            eliminar_unidad()
+
 
 def main():
     print("=== SISTEMA UNIRUTA ===")
@@ -425,6 +515,7 @@ def main():
     print("2. Choferes")
     print("3. Rutas")
     print("4. Viajes")
+    print("5. Pagos")
 
     opc = int(input("Selecciona una opcion: "))
 
@@ -437,6 +528,8 @@ def main():
             menu_rutas() 
         case 4:
             menu_viajes()
+        case 5: 
+            menu_pagos()
  
 
 
