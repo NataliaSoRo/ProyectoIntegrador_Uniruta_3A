@@ -14,13 +14,13 @@ class ViajeDAO:
 
         for registro in registros:
             viaje = Viaje(
-                viaj_id=registro[0],
-                viaj_origen=registro[1],
-                viaj_destino=registro[2],
-                viaj_fecha=registro[3],
-                viaj_hora=registro[4],
-                viaj_unid_id=registro[5],
-                viaj_estatus=registro[6]
+                id=registro[0],
+                origen=registro[1],
+                destino=registro[2],
+                fecha=registro[3],
+                hora=registro[4],
+                estatus=registro[5],
+                id_unidad=registro[6],
             )
 
             viajes.append(viaje)
@@ -30,56 +30,56 @@ class ViajeDAO:
 
         return viajes
     
-def insertar(self, viaje):
+    def insertar(self, viaje):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute("""
-        INSERT INTO viaje (viaj_origen, viaj_destino, viaj_fecha, viaj_hora, viaj_unid_id, viaj_estatus)
+        INSERT INTO viaje (origen, destino, fecha, hora, id_unidad, estatus)
         VALUES (%s, %s, %s, %s, %s, %s)
         """,(
-            viaje.viaj_origen,
-            viaje.viaj_destino,
-            viaje.viaj_fecha,
-            viaje.viaj_hora,
-            viaje.viaj_unid_id,
-            viaje.viaj_estatus
+            viaje.origen,
+            viaje.destino,
+            viaje.fecha,
+            viaje.hora,
+            viaje.id_unidad,
+            viaje.estatus
             ))
 
         conexion.commit()
         cursor.close()
         conexion.close()
 
-def actualizar(self, viaje):
+    def actualizar(self, viaje):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
 
         cursor.execute("""
         UPDATE viaje
-        SET viaj_origen = %s, viaj_destino = %s, viaj_fecha = %s, viaj_hora = %s, viaj_unid_id = %s, viaj_estatus = %s
-        WHERE viaj_id = %s
+        SET origen = %s, destino = %s, fecha = %s, hora = %s, id_unidad = %s, estatus = %s
+        WHERE id = %s
         """, (
-            viaje.viaj_origen,
-            viaje.viaj_destino,
-            viaje.viaj_fecha,
-            viaje.viaj_hora,
-            viaje.viaj_unid_id,
-            viaje.viaj_estatus,
-            viaje.viaj_id
+            viaje.origen,
+            viaje.destino,
+            viaje.fecha,
+            viaje.hora,
+            viaje.id_unidad,
+            viaje.estatus,
+            viaje.id
             ))
 
         conexion.commit()
         cursor.close()
         conexion.close()
 
-def eliminar(self, viaje_id):
-    conexion = Conexion.obtener_conexion()
-    cursor = conexion.cursor()
+    def eliminar(self, id):
+        conexion = Conexion.obtener_conexion()
+        cursor = conexion.cursor()
 
-    cursor.execute(
-        "DELETE FROM viaje WHERE viaj_id = %s", 
-        (viaje_id,)
+        cursor.execute(
+        "DELETE FROM viaje WHERE id = %s", 
+        (id,)
     )
 
-    conexion.commit()
-    cursor.close()
-    conexion.close()
+        conexion.commit()
+        cursor.close()
+        conexion.close()

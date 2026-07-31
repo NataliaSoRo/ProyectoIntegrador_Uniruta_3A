@@ -132,10 +132,10 @@ def ver_viajes():
             for viaje in viajes:
                 print("====================================")
                 print(
-                    f"ID: {viaje.viaj_id}, Origen: {viaje.viaj_origen}, "
-                    f"Destino: {viaje.viaj_destino}, Fecha: {viaje.viaj_fecha}, "
-                    f"Hora: {viaje.viaj_hora}, Unidad ID: {viaje.viaj_unid_id}, "
-                    f"Estatus: {viaje.viaj_estatus}"
+                    f"ID: {viaje.id_viaje}, Origen: {viaje.origen}, "
+                    f"Destino: {viaje.destino}, Fecha: {viaje.fecha}, "
+                    f"Hora: {viaje.hora}, Unidad ID: {viaje.id_unidad}, "
+                    f"Estatus: {viaje.estatus}"
                 )
 
     except Exception as e:
@@ -144,19 +144,19 @@ def ver_viajes():
 
 def insertar_viaje():
     try:
-        origen = input("Origen: ")
-        destino = input("Destino: ")
-        fecha = input("Fecha (AAAA-MM-DD): ")
-        hora = input("Hora (HH:MM:SS): ")
-        unid_id = int(input("ID de la unidad: "))
-        estatus = input("Estatus: ")
+        viaj_origen = input("Origen: ")
+        viaj_destino = input("Destino: ")
+        viaj_fecha = input("Fecha (AAAA-MM-DD): ")
+        viaj_hora = input("Hora (HH:MM:SS): ")
+        viaj_unid_id = int(input("ID de la unidad: "))
+        viaj_estatus = input("Estatus: ")
         viaje = Viaje(
-            viaj_origen=origen,
-            viaj_destino=destino,
-            viaj_fecha=fecha,
-            viaj_hora=hora,
-            viaj_unid_id=unid_id,
-            viaj_estatus=estatus
+            viaj_origen= viaj_origen,
+            viaj_destino=viaj_destino,
+            viaj_fecha=viaj_fecha,
+            viaj_hora=viaj_hora,
+            viaj_estatus=viaj_estatus,
+            viaj_unid_id= viaj_unid_id
         )
 
         viaje_dao = ViajeDAO()
@@ -170,22 +170,22 @@ def insertar_viaje():
 
 def actualizar_viaje():
     try:
-        id = int(input("ID del viaje: "))
-        origen = input("Nuevo origen: ")
-        destino = input("Nuevo destino: ")
-        fecha = input("Nueva fecha (AAAA-MM-DD): ")
-        hora = input("Nueva hora (HH:MM:SS): ")
-        unid_id = int(input("Nuevo ID de la unidad: "))
-        estatus = input("Nuevo estatus: ")
+        viaj_id = int(input("ID del viaje: "))
+        viaj_origen = input("Nuevo origen: ")
+        viaj_destino = input("Nuevo destino: ")
+        viaj_fecha = input("Nueva fecha (AAAA-MM-DD): ")
+        viaj_hora = input("Nueva hora (HH:MM:SS): ")
+        viaj_unid_id = int(input("Nuevo ID de la unidad: "))
+        viaj_estatus = input("Nuevo estatus: ")
 
         viaje = Viaje(
-            viaj_id=id,
-            viaj_origen=origen,
-            viaj_destino=destino,
-            viaj_fecha=fecha,
-            viaj_hora=hora,
-            viaj_unid_id=unid_id,
-            viaj_estatus=estatus
+            id=viaj_id,
+            viaj_origen=viaj_origen,
+            viaj_destino=viaj_destino,
+            viaj_fecha=viaj_fecha,
+            viaj_hora=viaj_hora,
+            viaj_unid_id=viaj_unid_id,
+            viaj_estatus=viaj_estatus
         )
 
         viaje_dao = ViajeDAO()
@@ -431,13 +431,14 @@ def ver_pagos():
         if len(pagos) == 0:
             print("No hay pagos registradas.")
         else:
-            for pagos in pagos: 
+            for pago in pagos: 
                 print("====================================")
                 print(
-                    f"ID: {pagos.id_pagos}, ID de viaje: {pagos.id_viaje}, "
-                    f"ID de chofer: {pagos.id_chofer}, Pago inicial: {pagos.pago_inicial}, "
-                    f"Pago final: {pagos.pago_final}, El pago total acumulado: {pagos.pago_total_acumulado}, "
-                    f"Metodo del pago {pagos.metodo_pago}, Periodo del pago: {pagos.periodo_pago}"
+                    f"ID: {pago.id_pago}, ID del viaje: {pago.id_viaje} "
+                    f"ID de chofer: {pago.id_chofer}, Pago base: {pago.pago_base}, Pago inicial: {pago.pago_inicial}, "
+                    f"Pago final: {pago.pago_final}, El pago total acumulado: {pago.total_acumulado}, "
+                    f"Metodo del pago {pago.metodo_pago}, Periodo del pago: {pago.periodo_pago}"
+                    
                 )
                 print("====================================")
         print("\n Conexión exitosa a la base de datos")
@@ -446,15 +447,18 @@ def ver_pagos():
         print(e)
         
 def insertar_pagos():
-    nombre = input("Escribe el nombre de la ruta nueva: ")
-    origen = input("Escribe el origen de la ruta nueva: ")
-    destino = input("Escribe el destino de la ruta nueva: ")
-    tiempo_estimado = input("Escribe el tiempo estimado de la ruta nueva: ")
+    id_chofer = input ("ID del chofer del cual se inserta el pago: ")
+    pago_base = input("Pago base: ")
+    pago_inicial = input("Pago inicial: ")
+    pago_final = input("Pago final: ")
+    pago_total_acumulado = input("Pago total acumulado: ")
+    metodo_pago = input ("Metodo del pago: ")
+    periodo_pago = input ("¿En que periodo se hace el pago?: ")
     try:
-        ruta_dao = RutaDAO()
-        id_ruta = ruta_dao.obtener_ultimo_id() + 1
-        ruta = Ruta(id_ruta, nombre, origen, destino, tiempo_estimado)
-        ruta_dao.insertar(ruta)
+        pago_dao = PagoDAO()
+        id_pago = pago_dao.obtener_ultimo_id() + 1
+        pago = Pago(id_pago, id_chofer, pago_base, pago_inicial, pago_final, pago_total_acumulado, metodo_pago, periodo_pago)
+        pago_dao.insertar(pago)
         print("Inserción realizada con éxito")
     except Exception as e:
         print("Error al insertar un nuevo chofer")
@@ -492,7 +496,7 @@ def eliminar_pagos():
         
 def menu_pagos():
     print("1. Ver todos los pagos")
-    print("2. Insertar un pago nueva")
+    print("2. Insertar un pago nuevo")
     print("3. Actualizar un pago")
     print("4. Eliminar un pago")
     opcion = int(input("Seleccionar una opcion (1-4): "))
@@ -501,7 +505,7 @@ def menu_pagos():
         case 1:
             ver_pagos()
         case 2:
-            insertar_unidad()
+            insertar_pagos()
         case 3:
             actualizar_unidad()
         case 4:

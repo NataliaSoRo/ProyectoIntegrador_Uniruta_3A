@@ -7,21 +7,22 @@ class PagoDAO:
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
             
-        cursor.execute("SELECT * FROM pagos")
+        cursor.execute("SELECT * FROM pago")
         registros = cursor.fetchall()
 
         pagos = []
         for registro in registros:
 
             pago = Pago(
-                id_pagos=registro[0],
+                id_pago=registro[0],
                 id_viaje=registro[1],
                 id_chofer=registro[2],
-                pago_inicial=registro[3],
+                pago_base=registro[3],
                 pago_final=registro[4],
-                pago_total_acumulado=registro[5],          
-                metodo_pago=registro[6],
-                periodo_pago=registro[7]
+                pago_inicial=registro[5],
+                total_acumulado=registro[6],          
+                metodo_pago=registro[7],
+                periodo_pago=registro[8],
                 )
             pagos.append(pago)
         cursor.close()
@@ -29,23 +30,24 @@ class PagoDAO:
 
         return pagos
     
-    def insertar(self, chofer):
+    def insertar(self, pago):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
         sql ="""
-        INSERT INTO choferes (id, nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO pagos (id_pagos, id_chofer, pago_inicial, pago_final, pago_total_acumulado, metodo_pago, periodo_pago, pago_base)
+        VALUES (%s, %s, %s, %s, %s, %s,%s, %s)
         """
 
         cursor.execute(
             sql,
-            (chofer.id,
-            chofer.nombre,
-            chofer.telefono,
-            chofer.licencia,
-            chofer.tipo_licencia,
-            chofer.vigen_licencia,
-            chofer.estatus)
+            (pago.id_pagos,
+            pago.id_chofer,
+            pago.pago_inicial,
+            pago.pago_final,
+            pago.pago_total_acumulado,
+            pago.metodo_pago,
+            pago.periodo_pago,
+            pago.pago_base)
         )
 
         conexion.commit()
@@ -92,7 +94,7 @@ class PagoDAO:
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
 
-        cursor.execute("SELECT id FROM choferes ORDER BY id DESC")
+        cursor.execute("SELECT id_pagos FROM pagos ORDER BY id_pagos DESC")
         resultado = cursor.fetchone()
 
         cursor.close()
