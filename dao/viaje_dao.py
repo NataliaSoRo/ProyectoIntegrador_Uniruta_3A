@@ -21,6 +21,8 @@ class ViajeDAO:
                 hora=registro[4],
                 estatus=registro[5],
                 id_unidad=registro[6],
+                id_chofer=registro[7],
+                id_ruta=registro[8]
             )
 
             viajes.append(viaje)
@@ -34,16 +36,19 @@ class ViajeDAO:
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute("""
-        INSERT INTO viaje (origen, destino, fecha, hora, id_unidad, estatus)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        """,(
+        INSERT INTO viaje (origen, destino, fecha, hora, estatus, id_unidad, id_chofer, id_ruta)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+        """,
+           (
             viaje.origen,
             viaje.destino,
             viaje.fecha,
             viaje.hora,
+            viaje.estatus,
             viaje.id_unidad,
-            viaje.estatus
-            ))
+            viaje.id_chofer,
+            viaje.id_ruta
+        ))
 
         conexion.commit()
         cursor.close()

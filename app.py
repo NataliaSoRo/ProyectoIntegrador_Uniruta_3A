@@ -132,10 +132,10 @@ def ver_viajes():
             for viaje in viajes:
                 print("====================================")
                 print(
-                    f"ID: {viaje.id_viaje}, Origen: {viaje.origen}, "
+                    f"ID: {viaje.id}, Origen: {viaje.origen}, "
                     f"Destino: {viaje.destino}, Fecha: {viaje.fecha}, "
-                    f"Hora: {viaje.hora}, Unidad ID: {viaje.id_unidad}, "
-                    f"Estatus: {viaje.estatus}"
+                    f"Hora: {viaje.hora}, Unidad ID: {viaje.id_unidad}, Chofer ID: {viaje.id_chofer}, "
+                    f"Ruta ID: {viaje.id_ruta}, Estatus: {viaje.estatus}"
                 )
 
     except Exception as e:
@@ -144,19 +144,24 @@ def ver_viajes():
 
 def insertar_viaje():
     try:
-        viaj_origen = input("Origen: ")
-        viaj_destino = input("Destino: ")
-        viaj_fecha = input("Fecha (AAAA-MM-DD): ")
-        viaj_hora = input("Hora (HH:MM:SS): ")
-        viaj_unid_id = int(input("ID de la unidad: "))
-        viaj_estatus = input("Estatus: ")
+        origen = input("Origen: ")
+        destino = input("Destino: ")
+        fecha = input("Fecha (AAAA-MM-DD): ")
+        hora = input("Hora (HH:MM:SS): ")
+        id_unidad = int(input("ID de la unidad: "))
+        estatus = input("Estatus: ")
+        id_chofer = int(input("ID del chofer: "))
+        id_ruta = int(input("ID de la ruta: "))
+
         viaje = Viaje(
-            viaj_origen= viaj_origen,
-            viaj_destino=viaj_destino,
-            viaj_fecha=viaj_fecha,
-            viaj_hora=viaj_hora,
-            viaj_estatus=viaj_estatus,
-            viaj_unid_id= viaj_unid_id
+            origen=origen,
+            destino=destino,
+            fecha=fecha,
+            hora=hora,
+            estatus=estatus,
+            id_unidad=id_unidad,
+            id_chofer=id_chofer,
+            id_ruta=id_ruta
         )
 
         viaje_dao = ViajeDAO()
@@ -170,22 +175,28 @@ def insertar_viaje():
 
 def actualizar_viaje():
     try:
-        viaj_id = int(input("ID del viaje: "))
-        viaj_origen = input("Nuevo origen: ")
-        viaj_destino = input("Nuevo destino: ")
-        viaj_fecha = input("Nueva fecha (AAAA-MM-DD): ")
-        viaj_hora = input("Nueva hora (HH:MM:SS): ")
-        viaj_unid_id = int(input("Nuevo ID de la unidad: "))
-        viaj_estatus = input("Nuevo estatus: ")
+  
+        id_viaje = int(input("Ingrese el ID del viaje a actualizar: "))
+        origen = input("Nuevo Origen: ")
+        destino = input("Nuevo Destino: ")
+        fecha = input("Nueva Fecha (AAAA-MM-DD): ")
+        hora = input("Nueva Hora (HH:MM:SS): ")
+        estatus = input("Nuevo Estatus: ")
+        id_unidad = int(input("Nuevo ID de la unidad: "))
+        id_chofer = int(input("Nuevo ID del chofer: "))
+        id_ruta = int(input("Nuevo ID de la ruta: "))
 
+        # 2. Creamos el objeto Viaje pasándole también el ID
         viaje = Viaje(
-            id=viaj_id,
-            viaj_origen=viaj_origen,
-            viaj_destino=viaj_destino,
-            viaj_fecha=viaj_fecha,
-            viaj_hora=viaj_hora,
-            viaj_unid_id=viaj_unid_id,
-            viaj_estatus=viaj_estatus
+            id=id_viaje,
+            origen=origen,
+            destino=destino,
+            fecha=fecha,
+            hora=hora,
+            estatus=estatus,
+            id_unidad=id_unidad,
+            id_chofer=id_chofer,
+            id_ruta=id_ruta
         )
 
         viaje_dao = ViajeDAO()
@@ -285,8 +296,8 @@ def ver_choferes():
                 print(
                     f"ID: {chofer.id}, Nombre: {chofer.nombre}, "
                     f"telefono: {chofer.telefono}, Licencia: {chofer.licencia}, "
-                    f"Tipo de licencia: {chofer.tipo_licencia}, Vigencia de licencia: {chofer.vigen_licencia}"
-                    f"estatus: {chofer.estatus}"
+                    f"Tipo de licencia: {chofer.tipo_licencia}, Vigencia de licencia: {chofer.vigen_licencia}, "
+                    f"Estatus: {chofer.estatus}"
                 )
                 print("====================================")
         print("\n Conexión exitosa a la base de datos")
@@ -317,12 +328,12 @@ def actualizar_chofer():
         chofer_dao = ChoferDAO()
         ver_choferes()
         id = int(input("Escribe el id del chofer a actualizar: "))
-        nombre = input("Escribe el nuevo nombre")
-        telefono = input("Escribe el nuevo telefono")
-        licencia = input("Escribe la nueva licencia")
-        tipo_licencia = input("Escribe el nuevo tipo de licencia")
+        nombre = input("Escribe el nuevo nombre: ")
+        telefono = input("Escribe el nuevo telefono: ")
+        licencia = input("Escribe la nueva licencia: ")
+        tipo_licencia = input("Escribe el nuevo tipo de licencia: ")
         vigen_licencia = input("Escribir la nueva vigencia de la licencia: ")
-        estatus = input("Escribir el nuevo estatus del chofer")
+        estatus = input("Escribir el nuevo estatus del chofer: ")
         chofer = Chofer(id, nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
         chofer_dao.actualizar(chofer)
         print(f"El usuario {id} se ha actualizado exitosamente")

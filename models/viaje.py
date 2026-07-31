@@ -1,10 +1,12 @@
 class Viaje:
 
-    def __init__(self, id=None, viaj_origen=None, viaj_destino=None, viaj_fecha=None, viaj_hora=None, viaj_unid_id=None, viaj_estatus=None):
+    def __init__(self, id=None, origen=None, destino=None, fecha=None, hora=None, id_unidad=None, estatus=None, id_chofer= None, id_ruta=None ):
         self.id = id
-        self.origen =viaj_origen
-        self.destino = viaj_destino
-        self.fecha = viaj_fecha
-        self.hora = viaj_hora
-        self.id_unidad = viaj_unid_id
-        self.estatus = viaj_estatus
+        self.origen = origen
+        self.destino = destino
+        self.fecha = fecha
+        self.hora = hora
+        self.id_unidad = id_unidad
+        self.estatus = estatus
+        self.id_chofer= id_chofer
+        self.id_ruta = id_ruta
