@@ -32,13 +32,13 @@ class UnidadDAO:
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
         sql ="""
-        INSERT INTO unidad (id, noeconomico, placas, modelo, marca, año, kilometraje, estatus)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO unidad (noeconomico, placas, modelo, marca, año, kilometraje, estatus)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
 
         cursor.execute(
             sql,
-            (unidad.id,
+            (
             unidad.noeconomico,
             unidad.placas,
             unidad.modelo,

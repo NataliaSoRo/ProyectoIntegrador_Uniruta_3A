@@ -104,3 +104,4 @@ class PagoDAO:
             return 0
         return resultado[0]
     
+    
