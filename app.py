@@ -445,7 +445,7 @@ def ver_pagos():
             for pago in pagos: 
                 print("====================================")
                 print(
-                    f"ID: {pago.id_pago}, ID del viaje: {pago.id_viaje} "
+                    f"ID: {pago.id}, ID del viaje: {pago.id_viaje} "
                     f"ID de chofer: {pago.id_chofer}, Pago base: {pago.pago_base}, Pago inicial: {pago.pago_inicial}, "
                     f"Pago final: {pago.pago_final}, El pago total acumulado: {pago.total_acumulado}, "
                     f"Metodo del pago {pago.metodo_pago}, Periodo del pago: {pago.periodo_pago}"
@@ -459,16 +459,27 @@ def ver_pagos():
         
 def insertar_pagos():
     id_chofer = input ("ID del chofer del cual se inserta el pago: ")
+    id_viaje = input ("ID de los viajes del cual se le pagan: ")
     pago_base = input("Pago base: ")
     pago_inicial = input("Pago inicial: ")
     pago_final = input("Pago final: ")
-    pago_total_acumulado = input("Pago total acumulado: ")
+    total_acumulado = input("Pago total acumulado: ")
     metodo_pago = input ("Metodo del pago: ")
     periodo_pago = input ("¿En que periodo se hace el pago?: ")
     try:
         pago_dao = PagoDAO()
-        id_pago = pago_dao.obtener_ultimo_id() + 1
-        pago = Pago(id_pago, id_chofer, pago_base, pago_inicial, pago_final, pago_total_acumulado, metodo_pago, periodo_pago)
+        id = pago_dao.obtener_ultimo_id() + 1
+        pago = Pago(
+            id=id,
+            id_viaje=id_viaje,
+            id_chofer=id_chofer,
+            pago_base=pago_base,
+            pago_inicial=pago_inicial,
+            pago_final=pago_final,
+            total_acumulado=total_acumulado,
+            metodo_pago=metodo_pago,
+            periodo_pago=periodo_pago
+        )
         pago_dao.insertar(pago)
         print("Inserción realizada con éxito")
     except Exception as e:
@@ -476,33 +487,50 @@ def insertar_pagos():
         print(e)
 
 def actualizar_pagos():
-    print("Selecciona al usuario a actualizar")
+    print("Selecciona el pago a actualizar")
+    pago_dao = PagoDAO()
+    
     try:
-        ruta_dao = RutaDAO()
-        ver_rutas()
-        id = int(input("Escribe el id de la ruta a actualizar: "))
-        nombre = input("Escribe el nuevo nombre: ")
-        origen = input("Escribe el nuevo origen: ")
-        destino = input("Escribe el nuevo destino: ")
-        tiempo_estimado = input("Escribe el nuevo tiempo estimado: ")
-        ruta = Ruta (id, nombre, origen, destino, tiempo_estimado)
-        ruta_dao.actualizar(ruta)
-        print(f"La ruta {id} se ha actualizado exitosamente")
+        ver_pagos()  
+        id = int(input("Escribe el ID del pago a actualizar: "))
+        id_viaje = input("Escribe el nuevo ID del viaje: ")
+        id_chofer = input("Escribe el nuevo ID del chofer: ")
+        pago_base = input("Escribe el nuevo pago base: ")
+        pago_inicial = input("Escribe el nuevo pago inicial: ")
+        pago_final = input("Escribe el nuevo pago final: ")
+        total_acumulado = input("Escribe el nuevo pago total acumulado: ")
+        metodo_pago = input("Escribe el nuevo método de pago: ")
+        periodo_pago = input("Escribe el nuevo período de pago: ")
+        
+        pago = Pago(
+            id=id,
+            id_viaje=id_viaje,
+            id_chofer=id_chofer,
+            pago_base=pago_base,
+            pago_inicial=pago_inicial,
+            pago_final=pago_final,
+            total_acumulado=total_acumulado,
+            metodo_pago=metodo_pago,
+            periodo_pago=periodo_pago
+        )
+        
+        pago_dao.actualizar(pago)
+        print(f"El pago con ID {id} se ha actualizado exitosamente")
 
     except Exception as e:
-        print("Error al actualizar una ruta")
+        print("Error al actualizar un pago")
         print(e)
         
 def eliminar_pagos():
     try:
-        ruta_dao = RutaDAO()
-        print("Lista de rutas disponibles: ")
-        ver_rutas()
-        id = int(input("Escribe el id de la ruta a eliminar: "))
-        ruta_dao.eliminar(id)
-        print(f"La ruta {id} ha sido eliminado con éxito")
+        pago_dao = PagoDAO()
+        print("Lista de pagos disponibles: ")
+        ver_pagos()
+        id = int(input("Escribe el id del pago a eliminar: "))
+        pago_dao.eliminar(id)
+        print(f"El pago {id} ha sido eliminado con éxito")
     except Exception as e:
-        print(f"Error al eliminar la ruta {id}")
+        print(f"Error al eliminar el pago {id}")
         print(e)
         
 def menu_pagos():
@@ -518,32 +546,116 @@ def menu_pagos():
         case 2:
             insertar_pagos()
         case 3:
-            actualizar_unidad()
+            actualizar_pagos()
         case 4:
-            eliminar_unidad()
+            eliminar_pagos()
+            
+            
+            
+            
+from dao.usuario_dao import UsuarioDAO
+from models.usuario import Usuario
+
+usuario_actual = None
+
+def ver_perfil():
+    global usuario_actual
+    
+    if usuario_actual is None:
+        print("\nNo has iniciado sesión.")
+        return
+
+    print("\n=== PERFIL DE USUARIO ===")
+    print("====================================")
+    print(f"ID: {usuario_actual.id}")
+    print(f"Nombre: {usuario_actual.nombre}")
+    print(f"Correo: {usuario_actual.correo}")
+    print(f"Rol: {usuario_actual.rol}")
+    print("====================================")
+
+
+def registrar_usuario():
+    nombre = input("Escribe tu nombre completo: ")
+    correo = input("Escribe tu correo electronico: ")
+    contrasena = input("Escribe tu contraseña: ")
+    rol = "admin"
+    try:
+        usuario_dao = UsuarioDAO()
+        id = usuario_dao.obtener_ultimo_id() + 1
+        usuario = Usuario(
+            id=id,
+            nombre=nombre,
+            correo=correo,
+            contrasena=contrasena,
+            rol=rol
+        )
+        usuario_dao.registrar(usuario)
+        print("Registro realizado con éxito")
+    except Exception as e:
+        print("Error al registrar un nuevo usuario")
+        print(e)
+
+def iniciar_sesion():
+    global usuario_actual
+    correo = input("Correo electronico: ")
+    contrasena = input("Contraseña: ")
+    try:
+        usuario_dao = UsuarioDAO()
+        usuario = usuario_dao.login(correo, contrasena)
+        
+        if usuario is not None:
+            usuario_actual = usuario  # Guardamos la sesión
+            print(f"\nBienvenido {usuario.nombre}")
+            return True
+        else:
+            print("Correo o contraseña incorrectos")
+            return False
+    except Exception as e:
+        print("Error al iniciar sesion")
+        print(e)
+        return False
+
+def menu_usuarios():
+    print("1. Registrar usuario nuevo")
+    print("2. Iniciar sesion")
+    print("3. Ver perfil")
+    
+    opcion = int(input("Seleccionar una opcion (1-2): "))
+    
+    match opcion:
+        case 2:
+            iniciar_sesion()
+            ver_perfil()
+        case 1:
+            registrar_usuario()
+        case 3:
+            ver_perfil()
 
 
 def main():
     print("=== SISTEMA UNIRUTA ===")
     print("Menú de opciones")
-    print("1. Unidades")
-    print("2. Choferes")
-    print("3. Rutas")
-    print("4. Viajes")
-    print("5. Pagos")
+    print("1. Usuarios")
+    print("2. Unidades")
+    print("3. Choferes")
+    print("4. Rutas")
+    print("5. Viajes")
+    print("6. Pagos")
 
     opc = int(input("Selecciona una opcion: "))
 
     match opc:
         case 1:
-            menu_unidades()
+            menu_usuarios()
         case 2:
-            menu_choferes()  
+            menu_unidades()
         case 3:
-            menu_rutas() 
+            menu_choferes()  
         case 4:
+            menu_rutas() 
+        case 5:
             menu_viajes()
-        case 5: 
+        case 6: 
             menu_pagos()
  
 

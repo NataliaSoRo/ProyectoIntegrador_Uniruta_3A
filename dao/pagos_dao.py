@@ -14,7 +14,7 @@ class PagoDAO:
         for registro in registros:
 
             pago = Pago(
-                id_pago=registro[0],
+                id=registro[0],
                 id_viaje=registro[1],
                 id_chofer=registro[2],
                 pago_base=registro[3],
@@ -34,57 +34,62 @@ class PagoDAO:
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
         sql ="""
-        INSERT INTO pagos (id_pagos, id_chofer, pago_inicial, pago_final, pago_total_acumulado, metodo_pago, periodo_pago, pago_base)
-        VALUES (%s, %s, %s, %s, %s, %s,%s, %s)
-        """
-
+        INSERT INTO pago (id, id_viaje, id_chofer, pago_base, pago_inicial, pago_final, total_acumulado, metodo_pago, periodo_pago)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    
         cursor.execute(
-            sql,
-            (pago.id_pagos,
+        sql,
+        (
+            pago.id,
+            pago.id_viaje,
             pago.id_chofer,
+            pago.pago_base,
             pago.pago_inicial,
             pago.pago_final,
-            pago.pago_total_acumulado,
+            pago.total_acumulado,
             pago.metodo_pago,
-            pago.periodo_pago,
-            pago.pago_base)
+            pago.periodo_pago
         )
+    )
 
         conexion.commit()
         cursor.close()
         conexion.close()
         
-    def actualizar(self, chofer):
+    def actualizar(self, pago):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
 
         sql ="""
-        UPDATE choferes
-        SET nombre = %s, telefono = %s, licencia = %s, tipo_licencia = %s, vigen_licencia = %s, estatus = %s
+        UPDATE pago 
+        SET id_viaje = %s, id_chofer = %s, pago_base = %s, pago_inicial = %s, pago_final = %s, total_acumulado = %s, metodo_pago = %s, periodo_pago = %s
         WHERE id = %s
         """
 
         cursor.execute(
             sql,
-            (chofer.nombre,
-            chofer.telefono,
-            chofer.licencia,
-            chofer.tipo_licencia,
-            chofer.vigen_licencia,
-            chofer.estatus,
-            chofer.id)
+            (pago.id_viaje,
+            pago.id_chofer,
+            pago.pago_base,
+            pago.pago_inicial,
+            pago.pago_final,
+            pago.total_acumulado,
+            pago.metodo_pago,
+            pago.periodo_pago,
+            pago.id)  
         )
         conexion.commit()
         cursor.close()
         conexion.close()
         
-    def eliminar(self, chofer_id):
+    def eliminar(self, id):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
 
         cursor.execute(
-            "DELETE FROM choferes WHERE id = %s",
-            (chofer_id,)
+            "DELETE FROM pago WHERE id = %s",
+            (id,)
             )
         conexion.commit()
         cursor.close()
@@ -94,7 +99,7 @@ class PagoDAO:
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
 
-        cursor.execute("SELECT id_pagos FROM pagos ORDER BY id_pagos DESC")
+        cursor.execute("SELECT id FROM pago ORDER BY id DESC")
         resultado = cursor.fetchone()
 
         cursor.close()
