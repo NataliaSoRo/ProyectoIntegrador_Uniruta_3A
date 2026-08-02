@@ -18,10 +18,11 @@ class UnidadDAO:
                 noeconomico=registro[1],
                 placas=registro[2],
                 modelo=registro[3],
-                marca=registro[4],
-                año=registro[5],          
-                kilometraje=registro[6],
-                estatus=registro[7])
+                año=registro[4],         
+                kilometraje=registro[5], 
+                estatus=registro[6],     
+                marca=registro[7]
+                )
             unidades.append(unidad)
         cursor.close()
         conexion.close()
@@ -32,7 +33,7 @@ class UnidadDAO:
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
         sql ="""
-        INSERT INTO unidad (noeconomico, placas, modelo, marca, año, kilometraje, estatus)
+        INSERT INTO unidad ("No_economico", placas, modelo, marca, año, kilometraje, estatus)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
 
@@ -59,7 +60,7 @@ class UnidadDAO:
 
         sql ="""
         UPDATE unidad
-        SET noeconomico = %s, placas = %s, modelo = %s, marca = %s, año = %s, kilometraje = %s, estatus = %s
+        SET "No_economico" = %s, placas = %s, modelo = %s, marca = %s, año = %s, kilometraje = %s, estatus = %s
         WHERE id = %s
         """
 
