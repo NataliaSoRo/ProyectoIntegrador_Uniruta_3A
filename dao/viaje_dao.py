@@ -7,7 +7,19 @@ class ViajeDAO:
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
             
-        cursor.execute("SELECT * FROM viaje")
+        cursor.execute("""
+        SELECT
+            viaje.id,
+            viaje.origen,
+            viaje.destino,
+            viaje.fecha,
+            viaje.hora,
+            viaje.estatus,
+            unidad.noeconomico
+        FROM viaje
+        INNER JOIN unidad
+        ON viaje.unidad = unidad.id
+        """)
         registros = cursor.fetchall()
 
         viajes = []
