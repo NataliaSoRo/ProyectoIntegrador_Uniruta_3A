@@ -10,3 +10,5 @@ class Viaje:
         self.estatus = estatus
         self.id_chofer= id_chofer
         self.id_ruta = id_ruta
+        
+ 

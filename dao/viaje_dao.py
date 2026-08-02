@@ -6,8 +6,23 @@ class ViajeDAO:
     def obtener_todos(self):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
-            
-        cursor.execute("SELECT * FROM viaje")
+        sql = """
+            SELECT 
+                v.id, 
+                v.origen, 
+                v.destino, 
+                v.fecha, 
+                v.hora, 
+                v.estatus, 
+                v.id_unidad, 
+                c.nombre AS chofer_nombre, 
+                r.nombre AS ruta_nombre
+            FROM viaje v
+            INNER JOIN choferes c ON v.id_chofer = c.id
+            INNER JOIN ruta r ON v.id_ruta = r.id
+        """
+        
+        cursor.execute(sql)
         registros = cursor.fetchall()
 
         viajes = []
@@ -19,19 +34,18 @@ class ViajeDAO:
                 destino=registro[2],
                 fecha=registro[3],
                 hora=registro[4],
-                estatus=registro[5],
                 id_unidad=registro[6],
-                id_chofer=registro[7],
-                id_ruta=registro[8]
+                estatus=registro[5],
+                id_chofer=registro[7],  # Aquí guardamos el NOMBRE del chofer (registro[7])
+                id_ruta=registro[8]     # Aquí guardamos el NOMBRE de la ruta (registro[8])
             )
-
             viajes.append(viaje)
 
         cursor.close()
         conexion.close()
 
         return viajes
-    
+       
     def insertar(self, viaje):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()

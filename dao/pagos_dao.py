@@ -7,12 +7,18 @@ class PagoDAO:
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
             
-        cursor.execute("SELECT * FROM pago")
+        query = """
+            SELECT p.id, p.id_viaje, p.id_chofer, p.pago_base, p.pago_final, 
+                   p.pago_inicial, p.total_acumulado, p.metodo_pago, p.periodo_pago,
+                   c.nombre
+            FROM pago p
+            JOIN choferes c ON p.id_chofer = c.id
+        """
+        cursor.execute(query)
         registros = cursor.fetchall()
 
         pagos = []
         for registro in registros:
-
             pago = Pago(
                 id=registro[0],
                 id_viaje=registro[1],
@@ -20,14 +26,15 @@ class PagoDAO:
                 pago_base=registro[3],
                 pago_final=registro[4],
                 pago_inicial=registro[5],
-                total_acumulado=registro[6],          
+                total_acumulado=registro[6],
                 metodo_pago=registro[7],
                 periodo_pago=registro[8],
-                )
+                nombre_chofer=registro[9]  
+            )
             pagos.append(pago)
+            
         cursor.close()
         conexion.close()
-
         return pagos
     
     def insertar(self, pago):

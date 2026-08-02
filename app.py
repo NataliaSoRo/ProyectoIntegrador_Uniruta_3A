@@ -130,12 +130,12 @@ def ver_viajes():
             print("No hay viajes registrados.")
         else:
             for viaje in viajes:
-                print("====================================")
+                print("==================================================")
                 print(
                     f"ID: {viaje.id}, Origen: {viaje.origen}, "
                     f"Destino: {viaje.destino}, Fecha: {viaje.fecha}, "
-                    f"Hora: {viaje.hora}, Unidad ID: {viaje.id_unidad}, Chofer ID: {viaje.id_chofer}, "
-                    f"Ruta ID: {viaje.id_ruta}, Estatus: {viaje.estatus}"
+                    f"Hora: {viaje.hora}, Unidad ID: {viaje.id_unidad}, Chofer: {viaje.id_chofer}, "
+                    f"Ruta: {viaje.id_ruta}, Estatus: {viaje.estatus}"
                 )
 
     except Exception as e:
@@ -186,7 +186,6 @@ def actualizar_viaje():
         id_chofer = int(input("Nuevo ID del chofer: "))
         id_ruta = int(input("Nuevo ID de la ruta: "))
 
-        # 2. Creamos el objeto Viaje pasándole también el ID
         viaje = Viaje(
             id=id_viaje,
             origen=origen,
@@ -446,7 +445,7 @@ def ver_pagos():
                 print("====================================")
                 print(
                     f"ID: {pago.id}, ID del viaje: {pago.id_viaje} "
-                    f"ID de chofer: {pago.id_chofer}, Pago base: {pago.pago_base}, Pago inicial: {pago.pago_inicial}, "
+                    f"Nombre del chofer: {pago.nombre_chofer}, Pago base: {pago.pago_base}, Pago inicial: {pago.pago_inicial}, "
                     f"Pago final: {pago.pago_final}, El pago total acumulado: {pago.total_acumulado}, "
                     f"Metodo del pago {pago.metodo_pago}, Periodo del pago: {pago.periodo_pago}"
                     
