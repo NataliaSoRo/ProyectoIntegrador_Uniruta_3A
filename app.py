@@ -126,21 +126,33 @@ def ver_viajes():
 
         print("=== Viajes registrados ===")
 
-        if len(viajes) == 0:
+        if not viajes:
             print("No hay viajes registrados.")
         else:
             for viaje in viajes:
                 print("==================================================")
+                chofer_display = (
+                    viaje.chofer_nombre
+                    if viaje.chofer_nombre
+                    else f"Sin asignar (ID: {viaje.id_chofer})"
+                )
+                ruta_display = (
+                    viaje.ruta_nombre
+                    if viaje.ruta_nombre
+                    else f"{viaje.origen} - {viaje.destino}"
+                )
+
                 print(
-                    f"ID: {viaje.id}, Origen: {viaje.origen}, "
-                    f"Destino: {viaje.destino}, Fecha: {viaje.fecha}, "
-                    f"Hora: {viaje.hora}, Unidad ID: {viaje.id_unidad}, Chofer: {viaje.id_chofer}, "
-                    f"Ruta: {viaje.id_ruta}, Estatus: {viaje.estatus}"
+                    f"ID: {viaje.id} | "
+                    f"Ruta: {ruta_display} | "
+                    f"Fecha: {viaje.fecha} {viaje.hora} | "
+                    f"Unidad ID: {viaje.id_unidad} | "
+                    f"Chofer: {chofer_display} | "
+                    f"Estatus: {viaje.estatus}"
                 )
 
     except Exception as e:
-        print("Error al ver los viajes")
-        print(e)
+        print("Error al ver los viajes:", e)
 
 def insertar_viaje():
     try:

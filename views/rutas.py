@@ -1,19 +1,17 @@
 import flet as ft
-from dao.viaje_dao import ViajeDAO
+from dao.ruta_dao import RutaDAO
 
 
-def vista_viajes(page: ft.Page, ir_a):
-    page.title = "UniRuta - Viajes"
+def vista_rutas(page: ft.Page, ir_a):
+    page.title = "UniRuta - Rutas"
 
     # Instancia del DAO
-    dao = ViajeDAO() if "ViajeDAO" in globals() else None
+    dao = RutaDAO()
 
-    # Usuario actual de la sesión (fallback a "Natalia Sosa Rodriguez" si no hay datos)
+    # Usuario actual de la sesión (fallback a "Juana Suarez" si no hay datos)
     usuario = getattr(page, "usuario_actual", None)
     nombre_usuario = (
-        getattr(usuario, "nombre", "Natalia Sosa Rodriguez")
-        if usuario
-        else "Natalia Sosa Rodriguez"
+        getattr(usuario, "nombre", "Juana Suarez") if usuario else "Juana Suarez"
     )
     rol_usuario = (
         getattr(usuario, "rol", "Administrador") if usuario else "Administrador"
@@ -249,26 +247,26 @@ def vista_viajes(page: ft.Page, ir_a):
                 item_sidebar(
                     "Unidades", ft.Icons.DIRECTIONS_BUS_OUTLINED, "unidades"
                 ),
-                item_sidebar("Rutas", ft.Icons.MAP_OUTLINED, "rutas"),
                 item_sidebar(
-                    "Viajes", ft.Icons.WORK_OUTLINE, "viajes", activo=True
+                    "Rutas", ft.Icons.MAP_OUTLINED, "rutas", activo=True
                 ),
+                item_sidebar("Viajes", ft.Icons.WORK_OUTLINE, "viajes"),
                 item_sidebar("Pagos", ft.Icons.ATTACH_MONEY, "pagos"),
             ],
         ),
     )
 
-    # --- 3. TABLA ---
-    tabla_viajes = ft.DataTable(
+    # --- 3. TABLA Y DATOS DINÁMICOS ---
+    tabla_rutas = ft.DataTable(
         bgcolor="white",
         heading_row_color="#EC932F",
         heading_row_height=38,
-        data_row_min_height=52,
-        column_spacing=20,
+        data_row_min_height=48,
+        column_spacing=24,
         columns=[
             ft.DataColumn(
                 ft.Text(
-                    "ID Viaje",
+                    "ID de la ruta",
                     color="white",
                     size=11,
                     weight=ft.FontWeight.BOLD,
@@ -276,7 +274,7 @@ def vista_viajes(page: ft.Page, ir_a):
             ),
             ft.DataColumn(
                 ft.Text(
-                    "No. Unidad",
+                    "Nombre de la ruta",
                     color="white",
                     size=11,
                     weight=ft.FontWeight.BOLD,
@@ -284,7 +282,7 @@ def vista_viajes(page: ft.Page, ir_a):
             ),
             ft.DataColumn(
                 ft.Text(
-                    "Chofer asignado",
+                    "Origen",
                     color="white",
                     size=11,
                     weight=ft.FontWeight.BOLD,
@@ -292,17 +290,7 @@ def vista_viajes(page: ft.Page, ir_a):
             ),
             ft.DataColumn(
                 ft.Text(
-                    "Ruta", color="white", size=11, weight=ft.FontWeight.BOLD
-                )
-            ),
-            ft.DataColumn(
-                ft.Text(
-                    "Fecha", color="white", size=11, weight=ft.FontWeight.BOLD
-                )
-            ),
-            ft.DataColumn(
-                ft.Text(
-                    "Hora de salida programada",
+                    "Destino",
                     color="white",
                     size=11,
                     weight=ft.FontWeight.BOLD,
@@ -310,7 +298,7 @@ def vista_viajes(page: ft.Page, ir_a):
             ),
             ft.DataColumn(
                 ft.Text(
-                    "Estatus",
+                    "Tiempo estimado",
                     color="white",
                     size=11,
                     weight=ft.FontWeight.BOLD,
@@ -328,135 +316,108 @@ def vista_viajes(page: ft.Page, ir_a):
         rows=[],
     )
 
-    def eliminar_viaje(id_v):
-        if dao and hasattr(dao, "eliminar"):
-            dao.eliminar(id_v)
-        cargar_datos_tabla()
-        page.update()
+    def obtener_val(r, llaves, por_defecto=""):
+        for llave in llaves:
+            if isinstance(r, dict) and llave in r and r[llave] is not None:
+                return r[llave]
+            if hasattr(r, llave) and getattr(r, llave) is not None:
+                return getattr(r, llave)
+        return por_defecto
+
+    def eliminar_ruta(id_r):
+        if hasattr(dao, "eliminar") and dao.eliminar(id_r):
+            cargar_datos_tabla()
+            page.update()
 
     def cargar_datos_tabla(filtro=""):
         lista = []
-        if dao:
-            if filtro.strip() and hasattr(dao, "buscar"):
+        if filtro.strip():
+            if hasattr(dao, "buscar"):
                 lista = dao.buscar(filtro)
+            elif hasattr(dao, "buscar_por_nombre"):
+                lista = dao.buscar_por_nombre(filtro)
+        else:
+            if hasattr(dao, "obtener_todas"):
+                lista = dao.obtener_todas()
             elif hasattr(dao, "obtener_todos"):
                 lista = dao.obtener_todos()
 
+        # Datos de prueba si no viene nada de BD
+        if not lista:
+            lista = [
+                {
+                    "ID": 1,
+                    "Nombre de la ruta": "Huamantla - Apizaco",
+                    "Origen": "Huamantla",
+                    "Destino": "UTT",
+                    "Tiempo estimado": "00:15:00",
+                },
+                {
+                    "ID": 2,
+                    "Nombre de la ruta": "Terrenate - Huamantla",
+                    "Origen": "Terrenate",
+                    "Destino": "UTT",
+                    "Tiempo estimado": "00:20:00",
+                },
+                {
+                    "ID": 3,
+                    "Nombre de la ruta": "H. Galeana - Huamantla",
+                    "Origen": "Galeana",
+                    "Destino": "UTT",
+                    "Tiempo estimado": "00:25:00",
+                },
+                {
+                    "ID": 4,
+                    "Nombre de la ruta": "Apizaco - Xalpatlahuaya",
+                    "Origen": "Apizaco",
+                    "Destino": "UTT",
+                    "Tiempo estimado": "00:45:00",
+                },
+            ]
+
         filas = []
-        for v in lista:
-            # 1. ID Viaje
-            id_v = getattr(v, "id", "V-000")
-            id_viaje = str(id_v)
+        for idx, r in enumerate(lista, start=1):
+            id_r = obtener_val(r, ["ID", "id", "id_ruta"], idx)
+            nombre = obtener_val(
+                r,
+                ["Nombre de la ruta", "nombre", "nombre_ruta", "Nombre"],
+                "Sin Nombre",
+            )
+            origen = obtener_val(r, ["Origen", "origen"], "S/N")
+            destino = obtener_val(r, ["Destino", "destino"], "S/N")
+            tiempo = obtener_val(
+                r,
+                ["Tiempo estimado", "tiempo_estimado", "tiempo"],
+                "00:00:00",
+            )
 
-            # 2. No. Unidad
-            unidad = getattr(v, "id_unidad", "-")
-
-            # 3. Chofer asignado
-            chofer = getattr(v, "chofer_nombre", "Sin asignar") or "Sin asignar"
-
-            # 4. Nombre de la Ruta (Prioriza ruta_nombre sobre origen/destino e ID)
-            if getattr(v, "ruta_nombre", None):
-                ruta_display = v.ruta_nombre
-            elif getattr(v, "origen", None) and getattr(v, "destino", None):
-                ruta_display = f"{v.origen} - {v.destino}"
-            else:
-                ruta_display = "-"
-
-            # 5. Fecha
-            fecha = str(getattr(v, "fecha", "-"))
-
-            # 6. Hora
-            hora = str(getattr(v, "hora", "00:00"))
-
-            # 7. Estatus y Colores
-            estatus = str(getattr(v, "estatus", "Inactivo")).capitalize()
-            estatus_lower = estatus.lower()
-
-            if "curso" in estatus_lower or "programado" in estatus_lower:
-                color_estatus = "#10B981"  # Verde
-            elif "concluido" in estatus_lower or "finalizado" in estatus_lower:
-                color_estatus = "#EC932F"  # Naranja
-            else:
-                color_estatus = "#64748B"  # Gris
-
-            # Construcción de la fila de la tabla
             filas.append(
                 ft.DataRow(
                     cells=[
                         ft.DataCell(
                             ft.Text(
-                                id_viaje,
+                                str(id_r),
                                 size=11,
                                 color="#1E293B",
                                 weight=ft.FontWeight.W_500,
                             )
                         ),
                         ft.DataCell(
-                            ft.Text(str(unidad), size=11, color="#1E293B")
-                        ),
-                        ft.DataCell(
-                            ft.Row(
-                                [
-                                    ft.CircleAvatar(
-                                        content=ft.Icon(
-                                            ft.Icons.PERSON,
-                                            size=13,
-                                            color="white",
-                                        ),
-                                        bgcolor="#94A3B8",
-                                        radius=11,
-                                    ),
-                                    ft.Text(
-                                        str(chofer),
-                                        size=11,
-                                        color="#1E293B",
-                                        weight=ft.FontWeight.W_500,
-                                    ),
-                                ],
-                                spacing=6,
-                            )
-                        ),
-                        ft.DataCell(
-                            ft.Text(str(ruta_display), size=11, color="#1E293B")
-                        ),
-                        ft.DataCell(
-                            ft.Container(
-                                padding=ft.Padding(6, 3, 6, 3),
-                                border=ft.Border.all(1, "#CBD5E1"),
-                                border_radius=4,
-                                content=ft.Row(
-                                    [
-                                        ft.Icon(
-                                            ft.Icons.CALENDAR_TODAY_OUTLINED,
-                                            size=12,
-                                            color="#0284C7",
-                                        ),
-                                        ft.Text(
-                                            fecha, size=10, color="#1E293B"
-                                        ),
-                                    ],
-                                    spacing=4,
-                                    tight=True,
-                                ),
-                            )
-                        ),
-                        ft.DataCell(
-                            ft.Container(
-                                padding=ft.Padding(12, 3, 12, 3),
-                                border=ft.Border.all(1, "#CBD5E1"),
-                                border_radius=12,
-                                content=ft.Text(
-                                    hora, size=11, color="#1E293B"
-                                ),
-                            )
-                        ),
-                        ft.DataCell(
                             ft.Text(
-                                estatus,
+                                str(nombre),
                                 size=11,
-                                color=color_estatus,
-                                weight=ft.FontWeight.BOLD,
+                                color="#1E293B",
+                                weight=ft.FontWeight.W_500,
                             )
+                        ),
+                        ft.DataCell(
+                            ft.Text(str(origen), size=11, color="#475569")
+                        ),
+                        ft.DataCell(
+                            ft.Text(str(destino), size=11, color="#475569")
+                        ),
+                        ft.DataCell(
+                            ft.Text(str(tiempo), size=11, color="#475569")
                         ),
                         ft.DataCell(
                             ft.Row(
@@ -467,9 +428,8 @@ def vista_viajes(page: ft.Page, ir_a):
                                         border=ft.Border.all(1.5, "#EC932F"),
                                         border_radius=12,
                                         alignment=ft.Alignment(0, 0),
-                                        on_click=lambda e, uid=id_v: print(
-                                            f"Editar {uid}"
-                                        ),
+                                        on_click=lambda e,
+                                        uid=id_r: print(f"Editar {uid}"),
                                         content=ft.Icon(
                                             ft.Icons.EDIT_OUTLINED,
                                             size=13,
@@ -483,7 +443,7 @@ def vista_viajes(page: ft.Page, ir_a):
                                         border_radius=12,
                                         alignment=ft.Alignment(0, 0),
                                         on_click=lambda e,
-                                        uid=id_v: eliminar_viaje(uid),
+                                        uid=id_r: eliminar_ruta(uid),
                                         content=ft.Icon(
                                             ft.Icons.DELETE_OUTLINE_ROUNDED,
                                             size=13,
@@ -497,15 +457,15 @@ def vista_viajes(page: ft.Page, ir_a):
                     ]
                 )
             )
-        tabla_viajes.rows = filas
+        tabla_rutas.rows = filas
 
     def al_cambiar_buscador(e):
         cargar_datos_tabla(e.control.value)
         page.update()
 
-    # --- 4. CONTROLES Y BUSCADOR ---
+    # --- 4. BUSCADOR Y BOTÓN ---
     buscador = ft.TextField(
-        hint_text="Busca chofer",
+        hint_text="Buscar ruta",
         prefix_icon=ft.Icons.SEARCH,
         height=36,
         content_padding=ft.Padding(12, 0, 12, 0),
@@ -517,12 +477,12 @@ def vista_viajes(page: ft.Page, ir_a):
         on_change=al_cambiar_buscador,
     )
 
-    btn_programar = ft.ElevatedButton(
+    btn_agregar = ft.ElevatedButton(
         content=ft.Row(
             [
                 ft.Icon(ft.Icons.ADD, color="white", size=16),
                 ft.Text(
-                    "Programar viaje",
+                    "Agregar ruta",
                     color="white",
                     size=12,
                     weight=ft.FontWeight.BOLD,
@@ -535,13 +495,16 @@ def vista_viajes(page: ft.Page, ir_a):
             shape=ft.RoundedRectangleBorder(radius=18),
             padding=ft.Padding(16, 6, 16, 6),
         ),
-        on_click=lambda e: print("Abrir modal programar viaje"),
+        on_click=lambda e: print("Abrir modal ruta"),
     )
 
     barra_controles = ft.Row(
         alignment=ft.MainAxisAlignment.CENTER,
         spacing=15,
-        controls=[ft.Container(width=420, content=buscador), btn_programar],
+        controls=[
+            ft.Container(width=380, content=buscador),
+            btn_agregar,
+        ],
     )
 
     cargar_datos_tabla()
@@ -554,10 +517,13 @@ def vista_viajes(page: ft.Page, ir_a):
             color=ft.Colors.with_opacity(0.1, "black"),
             offset=ft.Offset(0, 3),
         ),
-        content=ft.Column(scroll=ft.ScrollMode.AUTO, controls=[tabla_viajes]),
+        content=ft.Column(
+            scroll=ft.ScrollMode.AUTO,
+            controls=[tabla_rutas],
+        ),
     )
 
-    # --- ÁREA DE TRABAJO ---
+    # --- ÁREA DE CONTENIDO FINAL ---
     area_trabajo = ft.Container(
         expand=True,
         bgcolor="#FAFAFA",
@@ -569,8 +535,8 @@ def vista_viajes(page: ft.Page, ir_a):
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 ft.Text(
-                    "Viajes",
-                    size=24,
+                    "Rutas",
+                    size=22,
                     weight=ft.FontWeight.BOLD,
                     color="#000000",
                 ),
@@ -580,11 +546,19 @@ def vista_viajes(page: ft.Page, ir_a):
         ),
     )
 
+    # --- ESTRUCTURA GENERAL ---
     return ft.Column(
         expand=True,
         spacing=0,
         controls=[
             header,
-            ft.Row(expand=True, spacing=0, controls=[sidebar, area_trabajo]),
+            ft.Row(
+                expand=True,
+                spacing=0,
+                controls=[
+                    sidebar,
+                    area_trabajo,
+                ],
+            ),
         ],
     )

@@ -30,20 +30,29 @@ class ChoferDAO:
     def insertar(self, chofer):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
-        sql ="""
-        INSERT INTO choferes (id, nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+
+        # Función para leer campos sea diccionario u objeto
+        def obtener(obj, clave, defecto=None):
+            if isinstance(obj, dict):
+                return obj.get(clave, defecto)
+            return getattr(obj, clave, defecto)
+
+        # Ajusta 'estatus' a 'status' aquí abajo si tu columna SQL se llama 'status'
+        sql = """
+        INSERT INTO choferes (nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
+        VALUES (%s, %s, %s, %s, %s, %s)
         """
 
         cursor.execute(
             sql,
-            (chofer.id,
-            chofer.nombre,
-            chofer.telefono,
-            chofer.licencia,
-            chofer.tipo_licencia,
-            chofer.vigen_licencia,
-            chofer.estatus)
+            (
+                obtener(chofer, "nombre"),
+                obtener(chofer, "telefono"),
+                obtener(chofer, "licencia"),
+                obtener(chofer, "tipo_licencia"),
+                obtener(chofer, "vigen_licencia"),
+                obtener(chofer, "estatus", "Activo"), # o "status"
+            )
         )
 
         conexion.commit()

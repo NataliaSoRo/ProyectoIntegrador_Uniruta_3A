@@ -6,22 +6,7 @@ class ViajeDAO:
     def obtener_todos(self):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
-<<<<<<< HEAD
-            
-        cursor.execute("""
-        SELECT
-            viaje.id,
-            viaje.origen,
-            viaje.destino,
-            viaje.fecha,
-            viaje.hora,
-            viaje.estatus,
-            unidad.noeconomico
-        FROM viaje
-        INNER JOIN unidad
-        ON viaje.unidad = unidad.id
-        """)
-=======
+
         sql = """
             SELECT 
                 v.id, 
@@ -31,30 +16,34 @@ class ViajeDAO:
                 v.hora, 
                 v.estatus, 
                 v.id_unidad, 
+                v.id_chofer,
+                v.id_ruta,
                 c.nombre AS chofer_nombre, 
                 r.nombre AS ruta_nombre
             FROM viaje v
-            INNER JOIN choferes c ON v.id_chofer = c.id
-            INNER JOIN ruta r ON v.id_ruta = r.id
+            LEFT JOIN choferes c ON v.id_chofer = c.id
+            LEFT JOIN ruta r ON v.id_ruta = r.id
         """
-        
+
         cursor.execute(sql)
->>>>>>> e9a8dc24b24c74dd1022fa3956504170e4bc3e2d
         registros = cursor.fetchall()
 
         viajes = []
 
         for registro in registros:
+
             viaje = Viaje(
                 id=registro[0],
                 origen=registro[1],
                 destino=registro[2],
                 fecha=registro[3],
                 hora=registro[4],
-                id_unidad=registro[6],
                 estatus=registro[5],
-                id_chofer=registro[7],  # Aquí guardamos el NOMBRE del chofer (registro[7])
-                id_ruta=registro[8]     # Aquí guardamos el NOMBRE de la ruta (registro[8])
+                id_unidad=registro[6],
+                id_chofer=registro[7],
+                id_ruta=registro[8],
+                chofer_nombre=registro[9],
+                ruta_nombre=registro[10],
             )
             viajes.append(viaje)
 
@@ -62,7 +51,6 @@ class ViajeDAO:
         conexion.close()
 
         return viajes
-       
     def insertar(self, viaje):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()

@@ -26,9 +26,9 @@ def tabla_viajes():
             ft.DataRow(
                 cells=[
                     ft.DataCell(ft.Text(str(viaje.id))),
-                    ft.DataCell(ft.Text(str(viaje.unidad))),
-                    ft.DataCell(ft.Text("Sin asignar")),
-                    ft.DataCell(ft.Text(f"{viaje.origen} - {viaje.destino}")),
+                    ft.DataCell(ft.Text(str(viaje.id_unidad))),
+                    ft.DataCell(ft.Text(getattr(viaje, 'chofer_nombre', None) or "Sin asignar")),
+                    ft.DataCell(ft.Text(getattr(viaje, 'ruta_nombre', None) or f"{viaje.origen} - {viaje.destino}")),
                     ft.DataCell(ft.Text(str(viaje.fecha))),
                     ft.DataCell(ft.Text(str(viaje.hora))),
                     ft.DataCell(ft.Text(viaje.estatus)),
