@@ -1,34 +1,37 @@
 import flet as ft
-from dao.ruta_dao import RutaDAO
-from models.ruta import Ruta
+import traceback
+
+try:
+    from dao.ruta_dao import RutaDAO
+    from models.ruta import Ruta
+except ImportError as ex:
+    print(f"[vista_rutas] ERROR al importar RutaDAO/Ruta: {ex}")
+    RutaDAO = None
+    Ruta = None
 
 
+# ==========================================
+# VISTA RUTAS (COMPLETA Y COMPATIBLE)
+# ==========================================
 def vista_rutas(page: ft.Page, ir_a):
     page.title = "UniRuta - Rutas"
 
-    # Instancia del DAO
-    dao = RutaDAO()
+    dao = RutaDAO() if RutaDAO else None
 
     # Estado: si estamos editando, guarda el id de la ruta en edición
     id_ruta_edicion = None
 
     # Usuario actual de la sesión (fallback a "Juana Suarez" si no hay datos)
     usuario = getattr(page, "usuario_actual", None)
-    nombre_usuario = (
-        getattr(usuario, "nombre", "Juana Suarez") if usuario else "Juana Suarez"
-    )
-    rol_usuario = (
-        getattr(usuario, "rol", "Administrador") if usuario else "Administrador"
-    )
+    nombre_usuario = getattr(usuario, "nombre", "Juana Suarez") if usuario else "Juana Suarez"
+    rol_usuario = getattr(usuario, "rol", "Administrador") if usuario else "Administrador"
     correo_usuario = (
-        getattr(
-            usuario, "correo", getattr(usuario, "email", "usuario@uniruta.com")
-        )
+        getattr(usuario, "correo", getattr(usuario, "email", "usuario@uniruta.com"))
         if usuario
         else "usuario@uniruta.com"
     )
 
-    # --- SNACKBAR DE ÉXITO / ERROR (mismo patrón que choferes) ---
+    # --- SNACKBAR DE ÉXITO ---
     snack_exito = ft.SnackBar(
         content=ft.Row(
             controls=[
@@ -48,15 +51,25 @@ def vista_rutas(page: ft.Page, ir_a):
         snack_exito.content.controls[1].value = mensaje
         snack_exito.bgcolor = "#10B981"
         snack_exito.content.controls[0].name = ft.Icons.CHECK_CIRCLE
-        page.open(snack_exito)
+        _mostrar_snack()
 
+    # --- SNACKBAR DE ERROR (validaciones) ---
     def mostrar_error(mensaje):
         snack_exito.content.controls[1].value = mensaje
         snack_exito.bgcolor = "#EF4444"
         snack_exito.content.controls[0].name = ft.Icons.ERROR_OUTLINE
-        page.open(snack_exito)
+        _mostrar_snack()
 
-    # --- LÓGICA DE DIÁLOGOS (HEADER) ---
+    def _mostrar_snack():
+        if hasattr(page, "open"):
+            page.open(snack_exito)
+        else:
+            if snack_exito not in page.overlay:
+                page.overlay.append(snack_exito)
+            snack_exito.open = True
+            page.update()
+
+    # --- LÓGICA DE DIÁLOGOS DE CABECERA (HEADER) ---
     def cerrar_sesion(e):
         if hasattr(page, "usuario_actual"):
             page.usuario_actual = None
@@ -69,21 +82,15 @@ def vista_rutas(page: ft.Page, ir_a):
                 tight=True,
                 controls=[
                     ft.ListTile(
-                        leading=ft.Icon(
-                            ft.Icons.BADGE_OUTLINED, color="#3B82F6"
-                        ),
+                        leading=ft.Icon(ft.Icons.BADGE_OUTLINED, color="#3B82F6"),
                         title=ft.Text("Licencia por vencer", size=13),
-                        subtitle=ft.Text(
-                            "Revisa la vigencia de los choferes.", size=11
-                        ),
+                        subtitle=ft.Text("Revisa la vigencia de los choferes.", size=11),
                     ),
                 ],
             ),
-            actions=[
-                ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo))
-            ],
+            actions=[ft.TextButton("Cerrar", on_click=lambda e: cerrar_dialogo(dialogo))],
         )
-        page.open(dialogo)
+        abrir_dialogo(dialogo)
 
     def abrir_perfil(e):
         dialogo_perfil = ft.AlertDialog(
@@ -91,12 +98,7 @@ def vista_rutas(page: ft.Page, ir_a):
                 spacing=10,
                 controls=[
                     ft.Icon(ft.Icons.ACCOUNT_CIRCLE, color="#0E4A5B", size=28),
-                    ft.Text(
-                        "Mi Perfil",
-                        weight=ft.FontWeight.BOLD,
-                        size=18,
-                        color="#0F172A",
-                    ),
+                    ft.Text("Mi Perfil", weight=ft.FontWeight.BOLD, size=18, color="#0F172A"),
                 ],
             ),
             content=ft.Container(
@@ -108,58 +110,54 @@ def vista_rutas(page: ft.Page, ir_a):
                     spacing=12,
                     controls=[
                         ft.CircleAvatar(
-                            content=ft.Icon(
-                                ft.Icons.PERSON, size=36, color="white"
-                            ),
+                            content=ft.Icon(ft.Icons.PERSON, size=36, color="white"),
                             bgcolor="#0E4A5B",
                             radius=32,
                         ),
-                        ft.Text(
-                            nombre_usuario,
-                            size=16,
-                            weight=ft.FontWeight.BOLD,
-                            color="#0F172A",
-                        ),
+                        ft.Text(nombre_usuario, size=16, weight=ft.FontWeight.BOLD, color="#0F172A"),
                         ft.Container(
                             bgcolor="#E0F2FE",
                             border_radius=12,
                             padding=ft.Padding(10, 4, 10, 4),
-                            content=ft.Text(
-                                rol_usuario,
-                                size=11,
-                                color="#0369A1",
-                                weight=ft.FontWeight.BOLD,
-                            ),
+                            content=ft.Text(rol_usuario, size=11, color="#0369A1", weight=ft.FontWeight.BOLD),
                         ),
                         ft.Divider(height=1, color="#E2E8F0"),
                         ft.Row(
                             controls=[
-                                ft.Icon(
-                                    ft.Icons.EMAIL_OUTLINED,
-                                    size=16,
-                                    color="#64748B",
-                                ),
-                                ft.Text(
-                                    correo_usuario, size=12, color="#334155"
-                                ),
+                                ft.Icon(ft.Icons.EMAIL_OUTLINED, size=16, color="#64748B"),
+                                ft.Text(correo_usuario, size=12, color="#334155"),
                             ]
                         ),
                     ],
                 ),
             ),
-            actions=[
-                ft.TextButton(
-                    "Cerrar", on_click=lambda e: page.close(dialogo_perfil)
-                )
-            ],
+            actions=[ft.TextButton("Cerrar", on_click=lambda e: cerrar_dialogo(dialogo_perfil))],
         )
-        page.open(dialogo_perfil)
+        abrir_dialogo(dialogo_perfil)
+
+    # AUXILIARES PARA MANEJAR DIÁLOGOS (compatible con distintas versiones de Flet)
+    def abrir_dialogo(dlg):
+        if hasattr(page, "open"):
+            page.open(dlg)
+        else:
+            if dlg not in page.overlay:
+                page.overlay.append(dlg)
+            page.dialog = dlg
+            dlg.open = True
+            page.update()
+
+    def cerrar_dialogo(dlg):
+        if hasattr(page, "close"):
+            page.close(dlg)
+        else:
+            dlg.open = False
+            page.update()
 
     # --- 1. BARRA SUPERIOR (HEADER UNIFICADO) ---
     logo_header = ft.Container(
         padding=ft.Padding(15, 8, 15, 8),
         on_click=lambda e: ir_a("menu_principal"),
-        content=ft.Image(src="logo_uniruta.png", height=42, fit="contain"),
+        content=ft.Image(src="logo_uniruta.png", height=42, fit=ft.BoxFit.CONTAIN),
     )
 
     info_usuario = ft.Row(
@@ -178,12 +176,7 @@ def vista_rutas(page: ft.Page, ir_a):
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.END,
                 controls=[
-                    ft.Text(
-                        nombre_usuario,
-                        size=12,
-                        weight=ft.FontWeight.BOLD,
-                        color="#1E293B",
-                    ),
+                    ft.Text(nombre_usuario, size=12, weight=ft.FontWeight.BOLD, color="#1E293B"),
                     ft.Text(rol_usuario, size=11, color="#64748B"),
                 ],
             ),
@@ -195,9 +188,7 @@ def vista_rutas(page: ft.Page, ir_a):
                     border_radius=16,
                     alignment=ft.Alignment(0, 0),
                     bgcolor="#F1F5F9",
-                    content=ft.Icon(
-                        ft.Icons.PERSON_OUTLINE, size=18, color="#475569"
-                    ),
+                    content=ft.Icon(ft.Icons.PERSON_OUTLINE, size=18, color="#475569"),
                 ),
                 items=[
                     ft.PopupMenuItem(
@@ -246,14 +237,7 @@ def vista_rutas(page: ft.Page, ir_a):
                 spacing=12,
                 controls=[
                     ft.Icon(icono, color=color_ico, size=20),
-                    ft.Text(
-                        texto,
-                        color=color_txt,
-                        size=13,
-                        weight=(
-                            ft.FontWeight.BOLD if activo else ft.FontWeight.W_500
-                        ),
-                    ),
+                    ft.Text(texto, color=color_txt, size=13, weight=(ft.FontWeight.BOLD if activo else ft.FontWeight.W_500)),
                 ],
             ),
         )
@@ -266,22 +250,12 @@ def vista_rutas(page: ft.Page, ir_a):
             controls=[
                 ft.Container(
                     padding=ft.Padding(12, 8, 12, 4),
-                    content=ft.IconButton(
-                        icon=ft.Icons.MENU, icon_color="#1E293B"
-                    ),
+                    content=ft.IconButton(icon=ft.Icons.MENU, icon_color="#1E293B"),
                 ),
-                item_sidebar(
-                    "Menú principal",
-                    ft.Icons.HOME_OUTLINED,
-                    "menu_principal",
-                ),
+                item_sidebar("Menú principal", ft.Icons.HOME_OUTLINED, "menu_principal"),
                 item_sidebar("Choferes", ft.Icons.BADGE_OUTLINED, "choferes"),
-                item_sidebar(
-                    "Unidades", ft.Icons.DIRECTIONS_BUS_OUTLINED, "unidades"
-                ),
-                item_sidebar(
-                    "Rutas", ft.Icons.MAP_OUTLINED, "rutas", activo=True
-                ),
+                item_sidebar("Unidades", ft.Icons.DIRECTIONS_BUS_OUTLINED, "unidades"),
+                item_sidebar("Rutas", ft.Icons.MAP_OUTLINED, "rutas", activo=True),
                 item_sidebar("Viajes", ft.Icons.WORK_OUTLINE, "viajes"),
                 item_sidebar("Pagos", ft.Icons.ATTACH_MONEY, "pagos"),
             ],
@@ -338,7 +312,7 @@ def vista_rutas(page: ft.Page, ir_a):
     def guardar_ruta(e):
         nonlocal id_ruta_edicion
 
-        # --- Validaciones ---
+        # --- Validación de campos obligatorios ---
         if not txt_nombre_inner.value or not str(txt_nombre_inner.value).strip():
             mostrar_error("El nombre de la ruta es obligatorio")
             return
@@ -360,11 +334,18 @@ def vista_rutas(page: ft.Page, ir_a):
                 mostrar_error("La tarifa debe ser un número entero (ej. 25)")
                 return
 
+        if not Ruta or not dao:
+            mostrar_error("No hay conexión con la base de datos (revisa la consola/terminal)")
+            return
+
         observaciones_valor = (
             str(txt_observaciones_inner.value).strip()
             if txt_observaciones_inner.value and str(txt_observaciones_inner.value).strip()
             else None
         )
+
+        exito = False
+        mensaje = ""
 
         try:
             if id_ruta_edicion is None:
@@ -379,6 +360,7 @@ def vista_rutas(page: ft.Page, ir_a):
                     tarifa=tarifa_valor,
                 )
                 dao.insertar(ruta_obj)
+                exito = True
                 mensaje = "Ruta ingresada con éxito"
             else:
                 ruta_obj = Ruta(
@@ -391,6 +373,7 @@ def vista_rutas(page: ft.Page, ir_a):
                     tarifa=tarifa_valor,
                 )
                 dao.actualizar(ruta_obj)
+                exito = True
                 mensaje = "Ruta actualizada con éxito"
         except Exception as ex:
             print(f"[vista_rutas] Error al guardar/actualizar: {ex}")
@@ -398,13 +381,15 @@ def vista_rutas(page: ft.Page, ir_a):
             return
 
         restablecer_formulario()
-        page.close(modal_ruta)
+        cerrar_dialogo(modal_ruta)
         cargar_datos_tabla()
-        mostrar_exito(mensaje)
+
+        if exito:
+            mostrar_exito(mensaje)
 
     def cancelar_modal(e):
         restablecer_formulario()
-        page.close(modal_ruta)
+        cerrar_dialogo(modal_ruta)
 
     modal_content = ft.Container(
         width=520,
@@ -477,25 +462,25 @@ def vista_rutas(page: ft.Page, ir_a):
 
     def abrir_modal_agregar(e):
         restablecer_formulario()
-        page.open(modal_ruta)
+        abrir_dialogo(modal_ruta)
 
     def abrir_modal_editar(ruta_item):
         nonlocal id_ruta_edicion
-        id_ruta_edicion = obtener_val(ruta_item, ["id"])
+        id_ruta_edicion = obtener_valor(ruta_item, "id", None)
 
         txt_titulo_modal.value = "Editar ruta"
-        txt_nombre_inner.value = str(obtener_val(ruta_item, ["nombre"], ""))
-        txt_origen_inner.value = str(obtener_val(ruta_item, ["origen"], ""))
-        txt_destino_inner.value = str(obtener_val(ruta_item, ["destino"], ""))
-        txt_tiempo_inner.value = str(obtener_val(ruta_item, ["tiempo_estimado"], ""))
+        txt_nombre_inner.value = str(obtener_valor(ruta_item, "nombre", ""))
+        txt_origen_inner.value = str(obtener_valor(ruta_item, "origen", ""))
+        txt_destino_inner.value = str(obtener_valor(ruta_item, "destino", ""))
+        txt_tiempo_inner.value = str(obtener_valor(ruta_item, "tiempo_estimado", ""))
 
-        tarifa_val = obtener_val(ruta_item, ["tarifa"], None)
-        txt_tarifa_inner.value = str(tarifa_val) if tarifa_val is not None else ""
+        tarifa_val = obtener_valor(ruta_item, "tarifa", None)
+        txt_tarifa_inner.value = str(tarifa_val) if tarifa_val not in (None, "-") else ""
 
-        obs_val = obtener_val(ruta_item, ["observaciones"], None)
-        txt_observaciones_inner.value = str(obs_val) if obs_val else ""
+        obs_val = obtener_valor(ruta_item, "observaciones", None)
+        txt_observaciones_inner.value = str(obs_val) if obs_val not in (None, "-") else ""
 
-        page.open(modal_ruta)
+        abrir_dialogo(modal_ruta)
 
     # --- MODAL: VER OBSERVACIÓN COMPLETA ---
     def mostrar_observacion(nombre_ruta, observacion):
@@ -537,13 +522,13 @@ def vista_rutas(page: ft.Page, ir_a):
                             color="white",
                             width=200,
                             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20)),
-                            on_click=lambda e: page.close(dialogo_observacion),
+                            on_click=lambda e: cerrar_dialogo(dialogo_observacion),
                         ),
                     ],
                 ),
             ),
         )
-        page.open(dialogo_observacion)
+        abrir_dialogo(dialogo_observacion)
 
     # --- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN ---
     def confirmar_eliminar(id_r, nombre_r=""):
@@ -552,14 +537,31 @@ def vista_rutas(page: ft.Page, ir_a):
             return
 
         def borrar_y_cerrar(e):
+            print(f"[vista_rutas] Click en Aceptar-eliminar. id_ruta={id_r!r}, dao={'OK' if dao else 'None'}")
             try:
+                if not dao:
+                    mostrar_error("No hay conexión con la base de datos (revisa la consola/terminal)")
+                    cerrar_dialogo(dialogo_eliminar)
+                    return
+
                 dao.eliminar(id_r)
+                print(f"[vista_rutas] dao.eliminar({id_r!r}) ejecutado sin excepción")
                 cargar_datos_tabla()
-                page.close(dialogo_eliminar)
+                cerrar_dialogo(dialogo_eliminar)
                 mostrar_exito("Ruta eliminada con éxito")
-            except Exception as ex:
-                print(f"[vista_rutas] Error al eliminar: {ex}")
-                page.close(dialogo_eliminar)
+            except ValueError as ve:
+                # Error de negocio esperado (ej. FK violation por viajes asociados).
+                # dao.eliminar() ya nos da un mensaje amigable, lo mostramos tal cual.
+                print(f"[vista_rutas] No se pudo eliminar: {ve}")
+                cerrar_dialogo(dialogo_eliminar)
+                mostrar_error(str(ve))
+            except Exception:
+                print("[vista_rutas] EXCEPCIÓN al eliminar:")
+                traceback.print_exc()
+                try:
+                    cerrar_dialogo(dialogo_eliminar)
+                except Exception:
+                    pass
                 mostrar_error("Ocurrió un error al eliminar la ruta (revisa la consola/terminal)")
 
         dialogo_eliminar = ft.AlertDialog(
@@ -575,7 +577,7 @@ def vista_rutas(page: ft.Page, ir_a):
                     controls=[
                         ft.Text(
                             f"¿Estás seguro de eliminar la ruta \"{nombre_r or id_r}\"?",
-                            size=16,
+                            size=17,
                             weight=ft.FontWeight.BOLD,
                             color="#0F172A",
                             text_align=ft.TextAlign.CENTER,
@@ -596,7 +598,7 @@ def vista_rutas(page: ft.Page, ir_a):
                                     color="white",
                                     expand=True,
                                     style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20)),
-                                    on_click=lambda e: page.close(dialogo_eliminar),
+                                    on_click=lambda e: cerrar_dialogo(dialogo_eliminar),
                                 ),
                             ],
                         ),
@@ -604,7 +606,8 @@ def vista_rutas(page: ft.Page, ir_a):
                 ),
             ),
         )
-        page.open(dialogo_eliminar)
+
+        abrir_dialogo(dialogo_eliminar)
 
     # --- 4. TABLA Y DATOS DINÁMICOS ---
     tabla_rutas = ft.DataTable(
@@ -626,32 +629,32 @@ def vista_rutas(page: ft.Page, ir_a):
         rows=[],
     )
 
-    def obtener_val(r, llaves, por_defecto=""):
-        for llave in llaves:
-            if isinstance(r, dict) and llave in r and r[llave] is not None:
-                return r[llave]
-            if hasattr(r, llave) and getattr(r, llave) is not None:
-                return getattr(r, llave)
-        return por_defecto
+    def obtener_valor(item, clave, valor_defecto="-"):
+        if isinstance(item, dict):
+            valor = item.get(clave)
+        else:
+            valor = getattr(item, clave, None)
+        return valor if valor is not None else valor_defecto
 
     def cargar_datos_tabla(filtro=""):
         lista = []
-        if filtro.strip() and hasattr(dao, "buscar_por_nombre"):
-            lista = dao.buscar_por_nombre(filtro)
-        elif hasattr(dao, "obtener_todos"):
-            lista = dao.obtener_todos()
+        if dao:
+            if filtro.strip() and hasattr(dao, "buscar_por_nombre"):
+                lista = dao.buscar_por_nombre(filtro)
+            elif hasattr(dao, "obtener_todos"):
+                lista = dao.obtener_todos()
 
         filas = []
         for r in lista:
-            id_r = obtener_val(r, ["id"], None)
-            nombre = obtener_val(r, ["nombre"], "Sin nombre")
-            origen = obtener_val(r, ["origen"], "S/N")
-            destino = obtener_val(r, ["destino"], "S/N")
-            tiempo = obtener_val(r, ["tiempo_estimado"], "00:00:00")
-            tarifa_val = obtener_val(r, ["tarifa"], None)
-            observaciones_val = obtener_val(r, ["observaciones"], None)
+            id_r = obtener_valor(r, "id", None)
+            nombre = obtener_valor(r, "nombre", "Sin nombre")
+            origen = obtener_valor(r, "origen", "S/N")
+            destino = obtener_valor(r, "destino", "S/N")
+            tiempo = obtener_valor(r, "tiempo_estimado", "00:00:00")
+            tarifa_val = obtener_valor(r, "tarifa", None)
+            observaciones_val = obtener_valor(r, "observaciones", None)
 
-            tarifa_texto = f"${tarifa_val}" if tarifa_val is not None else "-"
+            tarifa_texto = f"${tarifa_val}" if tarifa_val not in (None, "-") else "-"
 
             tiene_observaciones = bool(
                 observaciones_val and str(observaciones_val).strip() not in ["", "-", "None"]
