@@ -1,50 +1,38 @@
 import flet as ft
 from datetime import datetime
+import traceback
 
 try:
     from dao.chofer_dao import ChoferDAO
-except ImportError:
+    from models.chofer import Chofer
+except ImportError as ex:
+    print(f"[vista_choferes] ERROR al importar ChoferDAO/Chofer: {ex}")
     ChoferDAO = None
+    Chofer = None
 
 
+# ==========================================
+# VISTA CHOFERES (COMPLETA Y COMPATIBLE)
+# ==========================================
 def vista_choferes(page: ft.Page, ir_a):
     page.title = "UniRuta - Choferes"
 
     dao = ChoferDAO() if ChoferDAO else None
 
-    # Usuario actual de la sesión
+    # Variables de estado para controlar si editamos o creamos
+    id_chofer_edicion = None
+
+    # Usuario de sesión
     usuario = getattr(page, "usuario_actual", None)
-    nombre_usuario = (
-        getattr(usuario, "nombre", "Juana Suarez") if usuario else "Juana Suarez"
-    )
-    rol_usuario = (
-        getattr(usuario, "rol", "Administrador") if usuario else "Administrador"
-    )
+    nombre_usuario = getattr(usuario, "nombre", "Natalia Sosa Rodriguez") if usuario else "Natalia Sosa Rodriguez"
+    rol_usuario = getattr(usuario, "rol", "Administrador") if usuario else "Administrador"
+    correo_usuario = getattr(usuario, "correo", getattr(usuario, "email", "usuario@uniruta.com")) if usuario else "usuario@uniruta.com"
 
-    # --- INICIALIZACIÓN DE SERVICIOS (FilePicker y DatePicker) ---
-    file_picker = ft.FilePicker()
-    page.services.append(file_picker)
-
-    ruta_imagen_seleccionada = {"path": None}
-
-    def al_seleccionar_archivo(e):
-        if e.files and len(e.files) > 0:
-            ruta = e.files[0].path
-            ruta_imagen_seleccionada["path"] = ruta
-            contenedor_foto.content = ft.Image(
-                src=ruta,
-                fit=ft.BoxFit.COVER,
-                border_radius=ft.border_radius.all(8),
-            )
-            contenedor_foto.update()
-
-    file_picker.on_result = al_seleccionar_archivo
-
-    # Calendar DatePicker para vigencia
+    # --- DATEPICKER (VIGENCIA) ---
     def al_cambiar_fecha(e):
         if date_picker.value:
-            txt_vigencia.value = date_picker.value.strftime("%Y-%m-%d")
-            txt_vigencia.update()
+            txt_vigencia_inner.value = date_picker.value.strftime("%Y-%m-%d")
+            txt_vigencia_inner.update()
 
     date_picker = ft.DatePicker(
         first_date=datetime(2020, 1, 1),
@@ -52,21 +40,55 @@ def vista_choferes(page: ft.Page, ir_a):
         on_change=al_cambiar_fecha,
     )
 
-    def abrir_calendario(e):
-        if date_picker not in page.overlay:
-            page.overlay.append(date_picker)
-        date_picker.open = True
-        page.update()
+    if date_picker not in page.overlay:
+        page.overlay.append(date_picker)
 
-    # --- LÓGICA DE CERRAR SESIÓN Y NOTIFICACIONES ---
+    def abrir_calendario(e):
+        abrir_dialogo(date_picker)
+
+    # --- SNACKBAR DE ÉXITO ---
+    snack_exito = ft.SnackBar(
+        content=ft.Row(
+            controls=[
+                ft.Icon(ft.Icons.CHECK_CIRCLE, color="white", size=20),
+                ft.Text("", color="white", size=13, weight=ft.FontWeight.BOLD),
+            ],
+            spacing=10,
+        ),
+        bgcolor="#10B981",
+        duration=2500,
+    )
+
+    if snack_exito not in page.overlay:
+        page.overlay.append(snack_exito)
+
+    def mostrar_exito(mensaje):
+        snack_exito.content.controls[1].value = mensaje
+        snack_exito.bgcolor = "#10B981"
+        snack_exito.content.controls[0].name = ft.Icons.CHECK_CIRCLE
+        _mostrar_snack()
+
+    # --- SNACKBAR DE ERROR (validaciones) ---
+    def mostrar_error(mensaje):
+        snack_exito.content.controls[1].value = mensaje
+        snack_exito.bgcolor = "#EF4444"
+        snack_exito.content.controls[0].name = ft.Icons.ERROR_OUTLINE
+        _mostrar_snack()
+
+    def _mostrar_snack():
+        if hasattr(page, "open"):
+            page.open(snack_exito)
+        else:
+            if snack_exito not in page.overlay:
+                page.overlay.append(snack_exito)
+            snack_exito.open = True
+            page.update()
+
+    # --- LÓGICA DE DIÁLOGOS DE CABECERA (HEADER) ---
     def cerrar_sesion(e):
         if hasattr(page, "usuario_actual"):
             page.usuario_actual = None
         ir_a("login")
-
-    def cerrar_dialogo(dialogo):
-        dialogo.open = False
-        page.update()
 
     def abrir_notificaciones(e):
         dialogo = ft.AlertDialog(
@@ -81,44 +103,88 @@ def vista_choferes(page: ft.Page, ir_a):
                     ),
                 ],
             ),
-            actions=[
-                ft.TextButton("Cerrar", on_click=lambda e: cerrar_dialogo(dialogo))
-            ],
+            actions=[ft.TextButton("Cerrar", on_click=lambda e: cerrar_dialogo(dialogo))],
         )
-        if dialogo not in page.overlay:
-            page.overlay.append(dialogo)
-        dialogo.open = True
-        page.update()
+        abrir_dialogo(dialogo)
+
+    def abrir_perfil(e):
+        dialogo_perfil = ft.AlertDialog(
+            title=ft.Row(
+                spacing=10,
+                controls=[
+                    ft.Icon(ft.Icons.ACCOUNT_CIRCLE, color="#0E4A5B", size=28),
+                    ft.Text("Mi Perfil", weight=ft.FontWeight.BOLD, size=18, color="#0F172A"),
+                ],
+            ),
+            content=ft.Container(
+                width=320,
+                padding=ft.Padding(10, 10, 10, 10),
+                content=ft.Column(
+                    tight=True,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=12,
+                    controls=[
+                        ft.CircleAvatar(
+                            content=ft.Icon(ft.Icons.PERSON, size=36, color="white"),
+                            bgcolor="#0E4A5B",
+                            radius=32,
+                        ),
+                        ft.Text(nombre_usuario, size=16, weight=ft.FontWeight.BOLD, color="#0F172A"),
+                        ft.Container(
+                            bgcolor="#E0F2FE",
+                            border_radius=12,
+                            padding=ft.Padding(10, 4, 10, 4),
+                            content=ft.Text(rol_usuario, size=11, color="#0369A1", weight=ft.FontWeight.BOLD),
+                        ),
+                        ft.Divider(height=1, color="#E2E8F0"),
+                        ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.EMAIL_OUTLINED, size=16, color="#64748B"),
+                                ft.Text(correo_usuario, size=12, color="#334155"),
+                            ]
+                        ),
+                    ],
+                ),
+            ),
+            actions=[ft.TextButton("Cerrar", on_click=lambda e: cerrar_dialogo(dialogo_perfil))],
+        )
+        abrir_dialogo(dialogo_perfil)
+
+    # AUXILIARES PARA MANEJAR DIÁLOGOS (compatible con distintas versiones de Flet)
+    def abrir_dialogo(dlg):
+        if hasattr(page, "open"):
+            page.open(dlg)
+        else:
+            if dlg not in page.overlay:
+                page.overlay.append(dlg)
+            page.dialog = dlg
+            dlg.open = True
+            page.update()
+
+    def cerrar_dialogo(dlg):
+        if hasattr(page, "close"):
+            page.close(dlg)
+        else:
+            dlg.open = False
+            page.update()
 
     # --- BARRA SUPERIOR (HEADER) ---
     logo_header = ft.Container(
-        padding=ft.Padding(10, 0, 0, 0),
+        padding=ft.Padding(15, 8, 15, 8),
         on_click=lambda e: ir_a("menu_principal"),
-        content=ft.Image(src="logo_uniruta.png", height=38, fit=ft.BoxFit.CONTAIN),
+        content=ft.Image(src="logo_uniruta.png", height=42, fit=ft.BoxFit.CONTAIN),
     )
 
     info_usuario = ft.Row(
         spacing=12,
         alignment=ft.MainAxisAlignment.END,
         controls=[
-            ft.Stack(
-                controls=[
-                    ft.IconButton(
-                        icon=ft.Icons.NOTIFICATIONS_NONE_ROUNDED,
-                        icon_color="#64748B",
-                        icon_size=22,
-                        tooltip="Notificaciones",
-                        on_click=abrir_notificaciones,
-                    ),
-                    ft.Container(
-                        content=ft.Text("1", size=9, color="white", weight=ft.FontWeight.BOLD),
-                        bgcolor="#EF4444",
-                        border_radius=8,
-                        padding=ft.Padding(4, 2, 4, 2),
-                        right=4,
-                        top=4,
-                    ),
-                ]
+            ft.IconButton(
+                icon=ft.Icons.NOTIFICATIONS_NONE_ROUNDED,
+                icon_color="#64748B",
+                icon_size=22,
+                tooltip="Notificaciones",
+                on_click=abrir_notificaciones,
             ),
             ft.Column(
                 spacing=0,
@@ -131,10 +197,10 @@ def vista_choferes(page: ft.Page, ir_a):
             ),
             ft.PopupMenuButton(
                 content=ft.Container(
-                    width=34,
-                    height=34,
-                    border=ft.Border.all(1, "#CBD5E1"),
-                    border_radius=17,
+                    width=32,
+                    height=32,
+                    border=ft.Border.all(1, "#A0AEC0"),
+                    border_radius=16,
                     alignment=ft.Alignment(0, 0),
                     bgcolor="#F1F5F9",
                     content=ft.Icon(ft.Icons.PERSON_OUTLINE, size=18, color="#475569"),
@@ -143,7 +209,7 @@ def vista_choferes(page: ft.Page, ir_a):
                     ft.PopupMenuItem(
                         icon=ft.Icons.PERSON_OUTLINE,
                         content=ft.Text("Mi Perfil", size=13),
-                        on_click=lambda e: ir_a("perfil"),
+                        on_click=abrir_perfil,
                     ),
                     ft.PopupMenuItem(
                         icon=ft.Icons.SETTINGS_OUTLINED,
@@ -162,15 +228,10 @@ def vista_choferes(page: ft.Page, ir_a):
     )
 
     header = ft.Container(
-        height=60,
+        height=58,
         bgcolor="white",
-        padding=ft.Padding(15, 0, 20, 0),
+        padding=ft.Padding(10, 0, 20, 0),
         border=ft.Border(bottom=ft.BorderSide(1, "#E2E8F0")),
-        shadow=ft.BoxShadow(
-            blur_radius=4,
-            color="#0D000000",
-            offset=ft.Offset(0, 2),
-        ),
         content=ft.Row(
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             controls=[logo_header, info_usuario],
@@ -191,12 +252,7 @@ def vista_choferes(page: ft.Page, ir_a):
                 spacing=12,
                 controls=[
                     ft.Icon(icono, color=color_ico, size=20),
-                    ft.Text(
-                        texto,
-                        color=color_txt,
-                        size=13,
-                        weight=(ft.FontWeight.BOLD if activo else ft.FontWeight.W_500),
-                    ),
+                    ft.Text(texto, color=color_txt, size=13, weight=(ft.FontWeight.BOLD if activo else ft.FontWeight.W_500)),
                 ],
             ),
         )
@@ -221,13 +277,537 @@ def vista_choferes(page: ft.Page, ir_a):
         ),
     )
 
-    # --- TABLA Y DATOS ---
+    # --- COMPONENTES DEL FORMULARIO Y MODAL ---
+    txt_titulo_modal = ft.Text("Ingresar chofer", size=22, weight=ft.FontWeight.BOLD, color="#0F172A")
+
+    txt_foto_inner = ft.TextField(
+        hint_text="EJ. foto_chofer.png",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        expand=True,
+    )
+    txt_foto = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=txt_foto_inner,
+    )
+
+    txt_nombre_inner = ft.TextField(
+        hint_text="EJ. Carlos Mendoza Ruiz",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        expand=True,
+    )
+    txt_nombre = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=txt_nombre_inner,
+    )
+
+    dd_tipo_licencia_inner = ft.Dropdown(
+        hint_text="Seleccionar tipo",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        options=[
+            ft.dropdown.Option("Estatal tipo A"),
+            ft.dropdown.Option("Estatal tipo B"),
+            ft.dropdown.Option("Federal tipo A"),
+            ft.dropdown.Option("Federal tipo B"),
+        ],
+        expand=True,
+    )
+    dd_tipo_licencia = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=dd_tipo_licencia_inner,
+    )
+
+    txt_vigencia_inner = ft.TextField(
+        hint_text="EJ. 2028-05-15",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        read_only=True,
+        suffix_icon=ft.Icons.CALENDAR_MONTH,
+        on_click=abrir_calendario,
+        expand=True,
+    )
+    txt_vigencia = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=txt_vigencia_inner,
+        on_click=abrir_calendario,
+    )
+
+    txt_telefono_inner = ft.TextField(
+        hint_text="EJ. 2411029384",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        expand=True,
+    )
+    txt_telefono = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=txt_telefono_inner,
+    )
+
+    txt_no_licencia_inner = ft.TextField(
+        hint_text="EJ. LIC-10293",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        expand=True,
+    )
+    txt_no_licencia = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=txt_no_licencia_inner,
+    )
+
+    # --- DROPDOWN DE ESTATUS (4 opciones: Activo, Inactivo, Licencia, Dado de baja) ---
+    dd_estatus_inner = ft.Dropdown(
+        hint_text="Seleccionar estatus",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        value="Activo",
+        options=[
+            ft.dropdown.Option("Activo"),
+            ft.dropdown.Option("Inactivo"),
+            ft.dropdown.Option("Licencia"),
+            ft.dropdown.Option("Dado de baja"),
+        ],
+        expand=True,
+    )
+    dd_estatus = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=dd_estatus_inner,
+    )
+
+    # --- CAMPO DE OBSERVACIONES (nuevo) ---
+    txt_observaciones_inner = ft.TextField(
+        hint_text="EJ. Cubre turno nocturno, sin restricciones",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 8, 10, 8),
+        text_size=12,
+        multiline=True,
+        min_lines=2,
+        max_lines=3,
+        expand=True,
+    )
+    txt_observaciones = ft.Container(
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, -1),
+        content=txt_observaciones_inner,
+    )
+
+    def restablecer_formulario():
+        nonlocal id_chofer_edicion
+        id_chofer_edicion = None
+        txt_titulo_modal.value = "Ingresar chofer"
+        txt_foto_inner.value = ""
+        txt_nombre_inner.value = ""
+        dd_tipo_licencia_inner.value = None
+        txt_vigencia_inner.value = ""
+        txt_telefono_inner.value = ""
+        txt_no_licencia_inner.value = ""
+        dd_estatus_inner.value = "Activo"
+        txt_observaciones_inner.value = ""
+
+    def guardar_chofer(e):
+        nonlocal id_chofer_edicion
+
+        # --- Validación de campos obligatorios ---
+        if not txt_nombre_inner.value or not str(txt_nombre_inner.value).strip():
+            mostrar_error("El nombre completo es obligatorio")
+            return
+        if not txt_no_licencia_inner.value or not str(txt_no_licencia_inner.value).strip():
+            mostrar_error("El número de licencia es obligatorio")
+            return
+        if not dd_tipo_licencia_inner.value:
+            mostrar_error("Selecciona el tipo de licencia")
+            return
+        if not txt_vigencia_inner.value:
+            mostrar_error("Selecciona la vigencia de la licencia")
+            return
+        if not txt_telefono_inner.value or not str(txt_telefono_inner.value).strip():
+            mostrar_error("El teléfono es obligatorio")
+            return
+        if not dd_estatus_inner.value:
+            mostrar_error("Selecciona el estatus del chofer")
+            return
+
+        if not Chofer or not dao:
+            mostrar_error("No hay conexión con la base de datos (revisa la consola/terminal)")
+            return
+
+        observaciones_valor = (
+            str(txt_observaciones_inner.value).strip()
+            if txt_observaciones_inner.value and str(txt_observaciones_inner.value).strip()
+            else None
+        )
+
+        chofer_obj = Chofer(
+            id=id_chofer_edicion,
+            nombre=str(txt_nombre_inner.value).strip(),
+            telefono=str(txt_telefono_inner.value).strip(),
+            licencia=str(txt_no_licencia_inner.value).strip(),
+            tipo_licencia=dd_tipo_licencia_inner.value,
+            vigen_licencia=txt_vigencia_inner.value,
+            foto=txt_foto_inner.value if txt_foto_inner.value else None,
+            estatus=dd_estatus_inner.value,  # viene del dropdown, editable por el usuario
+            observaciones=observaciones_valor,  # nuevo
+        )
+
+        exito = False
+        mensaje = ""
+
+        try:
+            if id_chofer_edicion is None:
+                dao.insertar(chofer_obj)
+                exito = True
+                mensaje = "Chofer ingresado con éxito"
+            else:
+                dao.actualizar(chofer_obj)
+                exito = True
+                mensaje = "Chofer actualizado con éxito"
+        except Exception as ex:
+            print(f"[vista_choferes] Error al guardar/actualizar: {ex}")
+            mostrar_error("Ocurrió un error al guardar el chofer (revisa la consola/terminal)")
+            return
+
+        restablecer_formulario()
+        cerrar_dialogo(modal_agregar)
+        cargar_datos_tabla()
+
+        if exito:
+            mostrar_exito(mensaje)
+
+    def cancelar_modal(e):
+        restablecer_formulario()
+        cerrar_dialogo(modal_agregar)
+
+    modal_content = ft.Container(
+        width=520,
+        padding=ft.Padding(20, 15, 20, 20),
+        bgcolor="white",
+        border_radius=12,
+        content=ft.Column(
+            tight=True,
+            spacing=15,
+            scroll=ft.ScrollMode.AUTO,
+            controls=[
+                txt_titulo_modal,
+                ft.Row(
+                    spacing=20,
+                    controls=[
+                        ft.Column(
+                            expand=1,
+                            controls=[
+                                ft.Text("Ruta/Nombre de Imagen", size=11, color="#475569"),
+                                txt_foto,
+                                ft.Text("No. licencia", size=11, color="#475569"),
+                                txt_no_licencia,
+                                ft.Text("Estatus", size=11, color="#475569"),
+                                dd_estatus,
+                            ],
+                        ),
+                        ft.Column(
+                            expand=1,
+                            controls=[
+                                ft.Text("Nombre completo", size=11, color="#475569"),
+                                txt_nombre,
+                                ft.Text("Tipo de licencia", size=11, color="#475569"),
+                                dd_tipo_licencia,
+                                ft.Text("Vigencia", size=11, color="#475569"),
+                                txt_vigencia,
+                                ft.Text("Teléfono", size=11, color="#475569"),
+                                txt_telefono,
+                            ],
+                        ),
+                    ],
+                ),
+                ft.Text("Observaciones", size=11, color="#475569"),
+                txt_observaciones,
+                ft.Row(
+                    controls=[
+                        ft.ElevatedButton("Aceptar", bgcolor="#6366F1", color="white", expand=True, on_click=guardar_chofer),
+                        ft.ElevatedButton("Cancelar", bgcolor="#F97316", color="white", expand=True, on_click=cancelar_modal),
+                    ],
+                ),
+            ],
+        ),
+    )
+
+    modal_agregar = ft.AlertDialog(
+        content=modal_content,
+        bgcolor="white",
+        shape=ft.RoundedRectangleBorder(radius=12),
+    )
+
+    def abrir_modal_agregar(e):
+        restablecer_formulario()
+        abrir_dialogo(modal_agregar)
+
+    def abrir_modal_editar(chofer_item):
+        nonlocal id_chofer_edicion
+        id_chofer_edicion = obtener_valor(chofer_item, "id")
+
+        txt_titulo_modal.value = "Editar chofer"
+        txt_nombre_inner.value = str(obtener_valor(chofer_item, "nombre", ""))
+        txt_telefono_inner.value = str(obtener_valor(chofer_item, "telefono", ""))
+        txt_no_licencia_inner.value = str(obtener_valor(chofer_item, "licencia", ""))
+        dd_tipo_licencia_inner.value = obtener_valor(chofer_item, "tipo_licencia", None)
+        txt_vigencia_inner.value = str(obtener_valor(chofer_item, "vigen_licencia", ""))
+
+        foto_val = obtener_valor(chofer_item, "foto", "")
+        txt_foto_inner.value = str(foto_val) if foto_val else ""
+
+        dd_estatus_inner.value = str(obtener_valor(chofer_item, "estatus", "Activo"))
+
+        observaciones_val = obtener_valor(chofer_item, "observaciones", "")
+        txt_observaciones_inner.value = str(observaciones_val) if observaciones_val else ""
+
+        # Sincroniza el DatePicker con la fecha actual, para que el calendario
+        # abra en la vigencia ya registrada en vez de la fecha por defecto
+        try:
+            date_picker.value = datetime.strptime(txt_vigencia_inner.value, "%Y-%m-%d")
+        except (ValueError, TypeError):
+            date_picker.value = None
+
+        abrir_dialogo(modal_agregar)
+
+    # --- MODAL DE AVISO: NO SE PUEDE ELIMINAR (chofer no dado de baja) ---
+    def mostrar_aviso_no_se_puede_eliminar(nombre_chofer, estatus_chofer):
+        dialogo_aviso = ft.AlertDialog(
+            bgcolor="white",
+            shape=ft.RoundedRectangleBorder(radius=12),
+            content=ft.Container(
+                width=420,
+                padding=ft.Padding(15, 20, 15, 10),
+                content=ft.Column(
+                    tight=True,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=15,
+                    controls=[
+                        ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, color="#F59E0B", size=42),
+                        ft.Text(
+                            "No se puede eliminar este chofer",
+                            size=17,
+                            weight=ft.FontWeight.BOLD,
+                            color="#0F172A",
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.Text(
+                            f"{nombre_chofer or 'Este chofer'} tiene estatus "
+                            f"\"{estatus_chofer or '-'}\". Solo se pueden eliminar "
+                            f"choferes con estatus \"Dado de baja\".",
+                            size=13,
+                            color="#475569",
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.ElevatedButton(
+                            "Entendido",
+                            bgcolor="#6366F1",
+                            color="white",
+                            width=200,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20)),
+                            on_click=lambda e: cerrar_dialogo(dialogo_aviso),
+                        ),
+                    ],
+                ),
+            ),
+        )
+        abrir_dialogo(dialogo_aviso)
+
+    # --- MODAL: VER OBSERVACIÓN COMPLETA ---
+    def mostrar_observacion(nombre_chofer, observacion):
+        dialogo_observacion = ft.AlertDialog(
+            bgcolor="white",
+            shape=ft.RoundedRectangleBorder(radius=12),
+            content=ft.Container(
+                width=420,
+                padding=ft.Padding(15, 20, 15, 10),
+                content=ft.Column(
+                    tight=True,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=15,
+                    controls=[
+                        ft.Icon(ft.Icons.CHAT_BUBBLE_OUTLINE_ROUNDED, color="#6366F1", size=36),
+                        ft.Text(
+                            f"Observación de {nombre_chofer or 'este chofer'}",
+                            size=16,
+                            weight=ft.FontWeight.BOLD,
+                            color="#0F172A",
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.Container(
+                            width=390,
+                            bgcolor="#F8FAFC",
+                            border=ft.Border.all(1, "#E2E8F0"),
+                            border_radius=8,
+                            padding=ft.Padding(12, 10, 12, 10),
+                            content=ft.Text(
+                                observacion or "-",
+                                size=13,
+                                color="#334155",
+                                text_align=ft.TextAlign.LEFT,
+                            ),
+                        ),
+                        ft.ElevatedButton(
+                            "Cerrar",
+                            bgcolor="#6366F1",
+                            color="white",
+                            width=200,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20)),
+                            on_click=lambda e: cerrar_dialogo(dialogo_observacion),
+                        ),
+                    ],
+                ),
+            ),
+        )
+        abrir_dialogo(dialogo_observacion)
+
+    # --- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN ---
+    def confirmar_eliminar(id_chofer, nombre_chofer="", estatus_chofer=""):
+        if id_chofer is None:
+            mostrar_error("No se pudo identificar al chofer a eliminar")
+            return
+
+        # Solo se permite eliminar choferes que estén "Dado de baja".
+        # Si tiene cualquier otro estatus (Activo, Inactivo, Licencia), se bloquea
+        # con un aviso emergente (AlertDialog).
+        estatus_norm = str(estatus_chofer or "").strip().lower()
+        if estatus_norm != "dado de baja":
+            mostrar_aviso_no_se_puede_eliminar(nombre_chofer, estatus_chofer)
+            return
+
+        def borrar_y_cerrar(e):
+            print(f"[vista_choferes] Click en Aceptar-eliminar. id_chofer={id_chofer!r}, dao={'OK' if dao else 'None'}")
+            try:
+                if not dao:
+                    mostrar_error("No hay conexión con la base de datos (revisa la consola/terminal)")
+                    cerrar_dialogo(dialogo_eliminar)
+                    return
+
+                dao.eliminar(id_chofer)
+                print(f"[vista_choferes] dao.eliminar({id_chofer!r}) ejecutado sin excepción")
+                cargar_datos_tabla()
+                cerrar_dialogo(dialogo_eliminar)
+                mostrar_exito("Chofer eliminado con éxito")
+            except ValueError as ve:
+                # Error de negocio esperado (ej. FK violation por pagos asociados).
+                # dao.eliminar() ya nos da un mensaje amigable, lo mostramos tal cual.
+                print(f"[vista_choferes] No se pudo eliminar: {ve}")
+                cerrar_dialogo(dialogo_eliminar)
+                mostrar_error(str(ve))
+            except Exception:
+                print("[vista_choferes] EXCEPCIÓN al eliminar:")
+                traceback.print_exc()
+                try:
+                    cerrar_dialogo(dialogo_eliminar)
+                except Exception:
+                    pass
+                mostrar_error("Ocurrió un error al eliminar el chofer (revisa la consola/terminal)")
+
+        dialogo_eliminar = ft.AlertDialog(
+            bgcolor="white",
+            shape=ft.RoundedRectangleBorder(radius=12),
+            content=ft.Container(
+                width=420,
+                padding=ft.Padding(15, 20, 15, 10),
+                content=ft.Column(
+                    tight=True,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=20,
+                    controls=[
+                        ft.Text(
+                            "¿Estas seguro de eliminar este registro de chofer?",
+                            size=17,
+                            weight=ft.FontWeight.BOLD,
+                            color="#0F172A",
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.Row(
+                            controls=[
+                                ft.ElevatedButton(
+                                    "Aceptar",
+                                    bgcolor="#6366F1",
+                                    color="white",
+                                    expand=True,
+                                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20)),
+                                    on_click=borrar_y_cerrar,
+                                ),
+                                ft.ElevatedButton(
+                                    "Cancelar",
+                                    bgcolor="#F97316",
+                                    color="white",
+                                    expand=True,
+                                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20)),
+                                    on_click=lambda e: cerrar_dialogo(dialogo_eliminar),
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+            ),
+        )
+
+        abrir_dialogo(dialogo_eliminar)
+
+    # --- TABLA Y BUSCADOR ---
+    txt_buscar = ft.TextField(
+        hint_text="EJ. Carlos Mendoza",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        prefix_icon=ft.Icons.SEARCH,
+        on_change=lambda e: cargar_datos_tabla(e.control.value),
+    )
+
+    container_buscar = ft.Container(
+        width=450,
+        height=38,
+        bgcolor="white",
+        border=ft.Border.all(1, "#E2E8F0"),
+        border_radius=20,
+        content=txt_buscar,
+    )
+
     tabla_choferes = ft.DataTable(
         bgcolor="white",
         heading_row_color="#EC932F",
-        heading_row_height=38,
-        data_row_min_height=48,
-        column_spacing=16,
+        heading_row_height=42,
+        data_row_min_height=52,
+        column_spacing=20,
         columns=[
             ft.DataColumn(ft.Text("NO.", color="white", size=11, weight=ft.FontWeight.BOLD)),
             ft.DataColumn(ft.Text("Nombre del chofer", color="white", size=11, weight=ft.FontWeight.BOLD)),
@@ -236,20 +816,26 @@ def vista_choferes(page: ft.Page, ir_a):
             ft.DataColumn(ft.Text("Tipo de licencia", color="white", size=11, weight=ft.FontWeight.BOLD)),
             ft.DataColumn(ft.Text("Vigencia de licencia", color="white", size=11, weight=ft.FontWeight.BOLD)),
             ft.DataColumn(ft.Text("Estado", color="white", size=11, weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(ft.Text("Obs.", color="white", size=11, weight=ft.FontWeight.BOLD)),
             ft.DataColumn(ft.Text("Acciones", color="white", size=11, weight=ft.FontWeight.BOLD)),
         ],
         rows=[],
     )
 
-    def eliminar_chofer(id_chofer):
-        if dao and hasattr(dao, "eliminar") and dao.eliminar(id_chofer):
-            cargar_datos_tabla()
-            page.update()
-
     def obtener_valor(item, clave, valor_defecto="-"):
         if isinstance(item, dict):
             return item.get(clave) or valor_defecto
-        return getattr(item, clave, None) or valor_defecto
+        return getattr(item, clave, valor_defecto) or valor_defecto
+
+    def color_por_estatus(estatus_str):
+        e = estatus_str.strip().lower()
+        if e in ("activo", "disponible"):
+            return "#10B981"       # verde
+        if e == "licencia":
+            return "#F59E0B"       # ámbar
+        if e == "dado de baja":
+            return "#EF4444"       # rojo
+        return "#64748B"           # gris (inactivo u otro)
 
     def cargar_datos_tabla(filtro=""):
         lista = []
@@ -267,14 +853,26 @@ def vista_choferes(page: ft.Page, ir_a):
             licencia_ch = obtener_valor(c, "licencia", "-")
             tipo_lic_ch = obtener_valor(c, "tipo_licencia", "-")
             vigen_lic_ch = obtener_valor(c, "vigen_licencia", "-")
-            estatus_str = str(obtener_valor(c, "estatus", "Inactivo"))
+            foto_ch = obtener_valor(c, "foto", None)
+            estatus_str = str(obtener_valor(c, "estatus", "Activo"))
+            observaciones_ch = obtener_valor(c, "observaciones", None)
 
-            if estatus_str.lower() in ["activo", "disponible"]:
-                color_est = "#10B981"
-            elif estatus_str.lower() in ["vencido"]:
-                color_est = "#EF4444"
+            color_est = color_por_estatus(estatus_str)
+
+            tiene_observaciones = bool(observaciones_ch and str(observaciones_ch).strip() not in ["", "-", "None"])
+            if tiene_observaciones:
+                celda_observaciones = ft.Container(
+                    tooltip=str(observaciones_ch).strip(),
+                    on_click=lambda e, n=nombre_ch, obs=str(observaciones_ch).strip(): mostrar_observacion(n, obs),
+                    content=ft.Icon(ft.Icons.CHAT_BUBBLE_OUTLINE_ROUNDED, size=16, color="#6366F1"),
+                )
             else:
-                color_est = "#F59E0B"
+                celda_observaciones = ft.Text("-", size=11, color="#CBD5E1")
+
+            if foto_ch and str(foto_ch) not in ["-", "None", ""]:
+                avatar_content = ft.Image(src=str(foto_ch), fit=ft.BoxFit.COVER)
+            else:
+                avatar_content = ft.Icon(ft.Icons.PERSON, size=14, color="white")
 
             filas.append(
                 ft.DataRow(
@@ -284,16 +882,11 @@ def vista_choferes(page: ft.Page, ir_a):
                             ft.Row(
                                 [
                                     ft.CircleAvatar(
-                                        content=ft.Icon(ft.Icons.PERSON, size=14, color="white"),
+                                        content=avatar_content,
                                         bgcolor="#94A3B8",
-                                        radius=12,
+                                        radius=14,
                                     ),
-                                    ft.Text(
-                                        str(nombre_ch),
-                                        size=11,
-                                        color="#1E293B",
-                                        weight=ft.FontWeight.W_500,
-                                    ),
+                                    ft.Text(str(nombre_ch), size=11, color="#1E293B", weight=ft.FontWeight.W_500),
                                 ],
                                 spacing=8,
                             )
@@ -303,381 +896,56 @@ def vista_choferes(page: ft.Page, ir_a):
                         ft.DataCell(ft.Text(str(tipo_lic_ch), size=11, color="#475569")),
                         ft.DataCell(ft.Text(str(vigen_lic_ch), size=11, color="#475569")),
                         ft.DataCell(ft.Text(estatus_str, size=11, color=color_est, weight=ft.FontWeight.BOLD)),
+                        ft.DataCell(celda_observaciones),
                         ft.DataCell(
                             ft.Row(
                                 [
                                     ft.Container(
-                                        width=24,
-                                        height=24,
-                                        border=ft.Border.all(1.5, "#0284C7"),
-                                        border_radius=12,
+                                        width=26,
+                                        height=26,
+                                        border=ft.Border.all(1.5, "#EC932F"),
+                                        border_radius=13,
                                         alignment=ft.Alignment(0, 0),
-                                        on_click=lambda e, i=id_ch: print(f"Editar {i}"),
-                                        content=ft.Icon(ft.Icons.EDIT_OUTLINED, size=13, color="#0284C7"),
+                                        tooltip="Editar",
+                                        on_click=lambda e, chofer_item=c: abrir_modal_editar(chofer_item),
+                                        content=ft.Icon(ft.Icons.EDIT_OUTLINED, size=14, color="#EC932F"),
                                     ),
                                     ft.Container(
-                                        width=24,
-                                        height=24,
+                                        width=26,
+                                        height=26,
                                         border=ft.Border.all(1.5, "#EF4444"),
-                                        border_radius=12,
+                                        border_radius=13,
                                         alignment=ft.Alignment(0, 0),
-                                        on_click=lambda e, i=id_ch: eliminar_chofer(i),
-                                        content=ft.Icon(ft.Icons.DELETE_OUTLINE_ROUNDED, size=13, color="#EF4444"),
+                                        tooltip="Eliminar",
+                                        on_click=lambda e, i=id_ch, n=nombre_ch, est=estatus_str: confirmar_eliminar(i, n, est),
+                                        content=ft.Icon(ft.Icons.DELETE_OUTLINE_ROUNDED, size=14, color="#EF4444"),
                                     ),
                                 ],
-                                spacing=6,
+                                spacing=8,
                             )
                         ),
                     ]
                 )
             )
         tabla_choferes.rows = filas
-
-    def al_cambiar_buscador(e):
-        cargar_datos_tabla(e.control.value)
-        page.update()
-
-    # --- CONTROLES DEL FORMULARIO DE REGISTRO ---
-    def seleccionar_imagen(e):
-        file_picker.pick_files(
-            allow_multiple=False,
-            file_type=ft.FilePickerFileType.IMAGE
-        )
-
-    contenedor_foto = ft.Container(
-        height=135,
-        bgcolor="#E2E8F0",
-        border_radius=8,
-        alignment=ft.Alignment(0, 0),
-        on_click=seleccionar_imagen,
-        tooltip="Haga clic para subir una imagen",
-        content=ft.Column(
-            alignment=ft.MainAxisAlignment.CENTER,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=4,
-            controls=[
-                ft.Icon(ft.Icons.ADD_A_PHOTO_OUTLINED, size=32, color="#64748B"),
-                ft.Text("Subir foto", size=10, color="#64748B", weight=ft.FontWeight.W_500)
-            ]
-        )
-    )
-
-    txt_nombre = ft.TextField(
-        hint_text="ej. Juan Lopez",
-        height=38,
-        content_padding=ft.Padding(10, 0, 10, 0),
-        border_radius=8,
-        bgcolor="#F8FAFC",
-        border_color="#CBD5E1",
-        text_size=12,
-    )
-
-    # DESPLEGABLE (Dropdown)
-    dd_tipo_licencia = ft.Dropdown(
-        hint_text="Seleccionar tipo",
-        height=38,
-        content_padding=ft.Padding(10, 0, 10, 0),
-        border_radius=8,
-        bgcolor="#F8FAFC",
-        border_color="#CBD5E1",
-        text_size=12,
-        options=[
-            ft.dropdown.Option("Estatal tipo A"),
-            ft.dropdown.Option("Estatal tipo B"),
-            ft.dropdown.Option("Federal tipo A"),
-            ft.dropdown.Option("Federal tipo B"),
-        ],
-    )
-
-    # CAMPO DE FECHA
-    txt_vigencia = ft.TextField(
-        hint_text="AAAA-MM-DD",
-        height=38,
-        content_padding=ft.Padding(10, 0, 10, 0),
-        border_radius=8,
-        bgcolor="#F8FAFC",
-        border_color="#CBD5E1",
-        text_size=12,
-        read_only=True,
-        suffix_icon=ft.Icons.CALENDAR_MONTH,
-        on_click=abrir_calendario,
-    )
-
-    txt_telefono = ft.TextField(
-        hint_text="+52 ej. 246 365 8385",
-        height=38,
-        content_padding=ft.Padding(10, 0, 10, 0),
-        border_radius=8,
-        bgcolor="#F8FAFC",
-        border_color="#CBD5E1",
-        text_size=12,
-    )
-
-    txt_no_licencia = ft.TextField(
-        hint_text="ej. A-1234",
-        height=38,
-        content_padding=ft.Padding(10, 0, 10, 0),
-        border_radius=8,
-        bgcolor="#F8FAFC",
-        border_color="#CBD5E1",
-        text_size=12,
-    )
-
-    def restablecer_formulario():
-        txt_nombre.value = ""
-        dd_tipo_licencia.value = None
-        txt_vigencia.value = ""
-        txt_telefono.value = ""
-        txt_no_licencia.value = ""
-        ruta_imagen_seleccionada["path"] = None
-        contenedor_foto.content = ft.Column(
-            alignment=ft.MainAxisAlignment.CENTER,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=4,
-            controls=[
-                ft.Icon(ft.Icons.ADD_A_PHOTO_OUTLINED, size=32, color="#64748B"),
-                ft.Text("Subir foto", size=10, color="#64748B", weight=ft.FontWeight.W_500)
-            ]
-        )
-
-    def guardar_chofer(e):
-        datos_chofer = {
-            "nombre": txt_nombre.value,
-            "telefono": txt_telefono.value,
-            "licencia": txt_no_licencia.value,
-            "tipo_licencia": dd_tipo_licencia.value,
-            "vigen_licencia": txt_vigencia.value,
-            "foto": ruta_imagen_seleccionada["path"],
-            "estatus": "Activo",
-        }
-
-        if dao:
-            try:
-                if hasattr(dao, "insertar"):
-                    dao.insertar(datos_chofer)
-                elif hasattr(dao, "guardar"):
-                    dao.guardar(datos_chofer)
-                elif hasattr(dao, "crear"):
-                    dao.crear(datos_chofer)
-            except Exception as ex:
-                print(f"Error al guardar: {ex}")
-
-        restablecer_formulario()
-        modal_agregar.open = False
-        cargar_datos_tabla()
-
-        # MOSTRAR NOTIFICACIÓN (SnackBar)
-        snack = ft.SnackBar(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.CHECK_CIRCLE, color="white"),
-                    ft.Text("Chofer registrado correctamente", color="white", weight=ft.FontWeight.BOLD)
-                ]
-            ),
-            bgcolor="#10B981",
-            duration=3000,
-        )
-        page.overlay.append(snack)
-        snack.open = True
-
-        page.update()
-
-    def cancelar_modal(e):
-        restablecer_formulario()
-        modal_agregar.open = False
-        page.update()
-
-    modal_content = ft.Container(
-        width=520,
-        padding=ft.Padding(20, 15, 20, 20),
-        bgcolor="white",
-        border_radius=12,
-        content=ft.Stack(
-            controls=[
-                ft.Container(
-                    top=0,
-                    right=0,
-                    content=ft.IconButton(
-                        icon=ft.Icons.CLOSE,
-                        icon_color="#1E293B",
-                        icon_size=20,
-                        on_click=cancelar_modal,
-                    ),
-                ),
-                ft.Column(
-                    tight=True,
-                    spacing=15,
-                    controls=[
-                        ft.Container(
-                            padding=ft.Padding(0, 10, 0, 5),
-                            alignment=ft.Alignment(0, 0),
-                            content=ft.Text(
-                                "Agregar chofer",
-                                size=22,
-                                weight=ft.FontWeight.BOLD,
-                                color="#0F172A",
-                                text_align=ft.TextAlign.CENTER,
-                            ),
-                        ),
-                        ft.Row(
-                            vertical_alignment=ft.CrossAxisAlignment.START,
-                            spacing=20,
-                            controls=[
-                                ft.Column(
-                                    expand=1,
-                                    spacing=10,
-                                    alignment=ft.MainAxisAlignment.START,
-                                    controls=[
-                                        ft.Text("Imagen del conductor", size=11, color="#475569", weight=ft.FontWeight.W_600),
-                                        contenedor_foto,
-                                        ft.Text("No. licencia", size=11, color="#475569", weight=ft.FontWeight.W_600),
-                                        txt_no_licencia,
-                                    ],
-                                ),
-                                ft.Column(
-                                    expand=1,
-                                    spacing=10,
-                                    alignment=ft.MainAxisAlignment.START,
-                                    controls=[
-                                        ft.Text("Nombre completo", size=11, color="#475569", weight=ft.FontWeight.W_600),
-                                        txt_nombre,
-                                        ft.Text("Tipo de licencia", size=11, color="#475569", weight=ft.FontWeight.W_600),
-                                        dd_tipo_licencia,
-                                        ft.Text("Vigencia de licencia", size=11, color="#475569", weight=ft.FontWeight.W_600),
-                                        txt_vigencia,
-                                        ft.Text("Numero telefonico", size=11, color="#475569", weight=ft.FontWeight.W_600),
-                                        txt_telefono,
-                                    ],
-                                ),
-                            ],
-                        ),
-                        ft.Container(height=5),
-                        ft.Row(
-                            spacing=15,
-                            controls=[
-                                ft.ElevatedButton(
-                                    "Aceptar",
-                                    bgcolor="#6366F1",
-                                    color="white",
-                                    expand=True,
-                                    style=ft.ButtonStyle(
-                                        shape=ft.RoundedRectangleBorder(radius=8),
-                                        padding=ft.Padding(0, 14, 0, 14),
-                                    ),
-                                    on_click=guardar_chofer,
-                                ),
-                                ft.ElevatedButton(
-                                    "Cancelar",
-                                    bgcolor="#F97316",
-                                    color="white",
-                                    expand=True,
-                                    style=ft.ButtonStyle(
-                                        shape=ft.RoundedRectangleBorder(radius=8),
-                                        padding=ft.Padding(0, 14, 0, 14),
-                                    ),
-                                    on_click=cancelar_modal,
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
-            ]
-        ),
-    )
-
-    modal_agregar = ft.AlertDialog(
-        content=modal_content,
-        bgcolor="white",
-        shape=ft.RoundedRectangleBorder(radius=12),
-        content_padding=0,
-    )
-
-    def abrir_modal_agregar(e):
-        if modal_agregar not in page.overlay:
-            page.overlay.append(modal_agregar)
-        modal_agregar.open = True
-        page.update()
-
-    # --- BUSCADOR Y BOTÓN ---
-    buscador = ft.TextField(
-        hint_text="Search",
-        prefix_icon=ft.Icons.SEARCH,
-        height=36,
-        content_padding=ft.Padding(12, 0, 12, 0),
-        border_radius=18,
-        bgcolor="white",
-        border_color="#CBD5E1",
-        focused_border_color="#EC932F",
-        text_size=12,
-        on_change=al_cambiar_buscador,
-    )
+        try:
+            page.update()
+        except Exception:
+            pass
 
     btn_ingresar = ft.ElevatedButton(
         content=ft.Row(
-            [
-                ft.Icon(ft.Icons.ADD, color="white", size=16),
-                ft.Text(
-                    "Ingresar chofer",
-                    color="white",
-                    size=12,
-                    weight=ft.FontWeight.BOLD,
-                ),
-            ],
+            [ft.Icon(ft.Icons.ADD, color="white", size=16), ft.Text("Ingresar chofer", color="white", size=12)],
+            tight=True,
             spacing=4,
         ),
         bgcolor="#EC932F",
-        style=ft.ButtonStyle(
-            shape=ft.RoundedRectangleBorder(radius=18),
-            padding=ft.Padding(16, 6, 16, 6),
-        ),
         on_click=abrir_modal_agregar,
-    )
-
-    barra_controles = ft.Row(
-        alignment=ft.MainAxisAlignment.CENTER,
-        spacing=15,
-        controls=[ft.Container(width=380, content=buscador), btn_ingresar],
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20)),
     )
 
     cargar_datos_tabla()
 
-    contenedor_tabla = ft.Container(
-        bgcolor="white",
-        border_radius=8,
-        shadow=ft.BoxShadow(
-            blur_radius=8,
-            color="#1A000000",
-            offset=ft.Offset(0, 3),
-        ),
-        content=ft.Column(
-            scroll=ft.ScrollMode.AUTO, controls=[tabla_choferes]
-        ),
-    )
-
-    # --- ÁREA DE CONTENIDO FINAL ---
-    area_trabajo = ft.Container(
-        expand=True,
-        bgcolor="#FAFAFA",
-        padding=ft.Padding(25, 15, 25, 20),
-        content=ft.Column(
-            expand=True,
-            scroll=ft.ScrollMode.AUTO,
-            spacing=20,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            controls=[
-                ft.Text(
-                    "Choferes",
-                    size=22,
-                    weight=ft.FontWeight.BOLD,
-                    color="#000000",
-                ),
-                barra_controles,
-                contenedor_tabla,
-            ],
-        ),
-    )
-
-    # --- ESTRUCTURA GENERAL ---
     return ft.Column(
         expand=True,
         spacing=0,
@@ -686,7 +954,33 @@ def vista_choferes(page: ft.Page, ir_a):
             ft.Row(
                 expand=True,
                 spacing=0,
-                controls=[sidebar, area_trabajo],
+                controls=[
+                    sidebar,
+                    ft.Container(
+                        expand=True,
+                        padding=30,
+                        content=ft.Column(
+                            expand=True,
+                            scroll=ft.ScrollMode.AUTO,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            controls=[
+                                ft.Text("Choferes", size=26, weight=ft.FontWeight.BOLD, color="#0F172A"),
+                                ft.Container(height=10),
+                                ft.Row(
+                                    alignment=ft.MainAxisAlignment.CENTER,
+                                    controls=[container_buscar, btn_ingresar],
+                                    spacing=15,
+                                ),
+                                ft.Container(height=20),
+                                ft.Container(
+                                    border_radius=12,
+                                    shadow=ft.BoxShadow(blur_radius=10, color="#1A000000", offset=ft.Offset(0, 4)),
+                                    content=tabla_choferes,
+                                ),
+                            ],
+                        ),
+                    ),
+                ],
             ),
         ],
     )

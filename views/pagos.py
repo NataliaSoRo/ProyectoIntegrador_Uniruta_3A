@@ -214,7 +214,7 @@ def vista_pagos(page: ft.Page, ir_a):
         ),
     )
 
-    # --- 3. VISTA MODAL / FORMULARIO INICIAL DE INGRESO (TARJETA PROTOTIPO) ---
+    # --- 3. VISTA MODAL / FORMULARIO INICIAL DE INGRESO (TARJETA) ---
     txt_correo_auth = ft.TextField(
         hint_text="juanperez@gmail.com",
         width=290,
@@ -352,7 +352,10 @@ def vista_pagos(page: ft.Page, ir_a):
         column_spacing=18,
         columns=[
             ft.DataColumn(
-                ft.Text("ID", color="white", size=11, weight=ft.FontWeight.BOLD)
+                ft.Text("ID", 
+                    color="white", 
+                    size=11, 
+                    weight=ft.FontWeight.BOLD)
             ),
             ft.DataColumn(
                 ft.Text(

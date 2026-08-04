@@ -1,7 +1,9 @@
 class Ruta:
-    def __init__(self, id=None, nombre=None, origen=None, destino=None, tiempo_estimado=None):
-        self.id=id
+    def __init__(self,id=None, nombre=None, origen=None, destino=None, tiempo_estimado=None, observaciones=None,tarifa=None):
+        self.id = id
         self.nombre = nombre
         self.origen = origen
         self.destino = destino
         self.tiempo_estimado = tiempo_estimado
+        self.observaciones = observaciones
+        self.tarifa = tarifa

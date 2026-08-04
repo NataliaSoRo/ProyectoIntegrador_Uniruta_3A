@@ -291,83 +291,132 @@ def menu_rutas():
 from dao.chofer_dao import ChoferDAO
 from models.chofer import Chofer
 
+
 def ver_choferes():
     try:
-        Chofer_dao = ChoferDAO()
+        chofer_dao = ChoferDAO()
 
-        Choferes = Chofer_dao.obtener_todos()
+        choferes = chofer_dao.obtener_todos()
 
         print("=== Lista de choferes ===")
 
-        if len(Choferes) == 0:
+        if len(choferes) == 0:
             print("No hay choferes registrados.")
         else:
-            for chofer in Choferes: 
+            for chofer in choferes:
                 print("====================================")
                 print(
                     f"ID: {chofer.id}, Nombre: {chofer.nombre}, "
-                    f"telefono: {chofer.telefono}, Licencia: {chofer.licencia}, "
+                    f"Telefono: {chofer.telefono}, Licencia: {chofer.licencia}, "
                     f"Tipo de licencia: {chofer.tipo_licencia}, Vigencia de licencia: {chofer.vigen_licencia}, "
-                    f"Estatus: {chofer.estatus}"
+                    f"Foto: {chofer.foto}, Estatus: {chofer.estatus}, "
+                    f"Observaciones: {chofer.observaciones}"
                 )
                 print("====================================")
-        print("\n Conexión exitosa a la base de datos")
+        print("\nConexión exitosa a la base de datos")
     except Exception as e:
         print("Error: ")
         print(e)
-        
+
+
 def insertar_chofer():
-    nombre = input("Escribe el nombre del nuevo chofer: ")
-    telefono = int(input("Escribe el telefono del nuevo chofer: "))
-    licencia = input("Escribe la licencia del nuevo chofer: ")
-    tipo_licencia = input("Escribe el tipo de licencia del nuevo chofer: ")
-    vigen_licencia = input("Escribe la vigencia de la licencia (AAAA-MM-DD): ")
-    estatus = input("Escribe el estatus del nuevo chofer: ")
     try:
+        nombre = input("Escribe el nombre del nuevo chofer: ")
+        telefono = input("Escribe el telefono del nuevo chofer: ")
+        licencia = input("Escribe la licencia del nuevo chofer: ")
+        tipo_licencia = input("Escribe el tipo de licencia del nuevo chofer: ")
+        vigen_licencia = input("Escribe la vigencia de la licencia (AAAA-MM-DD): ")
+        foto = input("Escribe la ruta de la foto del nuevo chofer (opcional): ")
+        estatus = input("Escribe el estatus del nuevo chofer (Enter = Activo): ")
+        observaciones = input("Escribe observaciones del nuevo chofer (opcional): ")
+
         chofer_dao = ChoferDAO()
         id_chofer = chofer_dao.obtener_ultimo_id() + 1
-        chofer = Chofer(id_chofer, nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
+
+        # Se usan argumentos con nombre para evitar errores de orden
+        chofer = Chofer(
+            id=id_chofer,
+            nombre=nombre,
+            telefono=telefono,
+            licencia=licencia,
+            tipo_licencia=tipo_licencia,
+            vigen_licencia=vigen_licencia,
+            foto=foto if foto.strip() else None,
+            estatus=estatus if estatus.strip() else "Activo",
+            observaciones=observaciones if observaciones.strip() else None,
+        )
         chofer_dao.insertar(chofer)
         print("Inserción realizada con éxito")
     except Exception as e:
         print("Error al insertar un nuevo chofer")
         print(e)
 
+
 def actualizar_chofer():
     print("Selecciona al usuario a actualizar")
+    id_chofer = None
     try:
         chofer_dao = ChoferDAO()
         ver_choferes()
-        id = int(input("Escribe el id del chofer a actualizar: "))
-        nombre = input("Escribe el nuevo nombre: ")
-        telefono = input("Escribe el nuevo telefono: ")
-        licencia = input("Escribe la nueva licencia: ")
-        tipo_licencia = input("Escribe el nuevo tipo de licencia: ")
-        vigen_licencia = input("Escribir la nueva vigencia de la licencia: ")
-        estatus = input("Escribir el nuevo estatus del chofer: ")
-        chofer = Chofer(id, nombre, telefono, licencia, tipo_licencia, vigen_licencia, estatus)
+        id_chofer = int(input("Escribe el id del chofer a actualizar: "))
+
+        # Traemos el registro actual para no perder datos que el usuario
+        # decida no modificar (ej. foto u observaciones)
+        choferes = chofer_dao.obtener_todos()
+        chofer_actual = next((c for c in choferes if c.id == id_chofer), None)
+
+        if chofer_actual is None:
+            print(f"No se encontró ningún chofer con id {id_chofer}")
+            return
+
+        def pedir(etiqueta, valor_actual):
+            nuevo = input(f"{etiqueta} (actual: {valor_actual}) - Enter para no cambiar: ")
+            return nuevo.strip() if nuevo.strip() else valor_actual
+
+        nombre = pedir("Nuevo nombre", chofer_actual.nombre)
+        telefono = pedir("Nuevo telefono", chofer_actual.telefono)
+        licencia = pedir("Nueva licencia", chofer_actual.licencia)
+        tipo_licencia = pedir("Nuevo tipo de licencia", chofer_actual.tipo_licencia)
+        vigen_licencia = pedir("Nueva vigencia de licencia (AAAA-MM-DD)", chofer_actual.vigen_licencia)
+        foto = pedir("Nueva ruta de foto", chofer_actual.foto)
+        estatus = pedir("Nuevo estatus", chofer_actual.estatus)
+        observaciones = pedir("Nuevas observaciones", chofer_actual.observaciones)
+
+        chofer = Chofer(
+            id=id_chofer,
+            nombre=nombre,
+            telefono=telefono,
+            licencia=licencia,
+            tipo_licencia=tipo_licencia,
+            vigen_licencia=vigen_licencia,
+            foto=foto,
+            estatus=estatus,
+            observaciones=observaciones,
+        )
         chofer_dao.actualizar(chofer)
-        print(f"El usuario {id} se ha actualizado exitosamente")
+        print(f"El chofer {id_chofer} se ha actualizado exitosamente")
 
     except Exception as e:
-        print("Error al actualizar un usuario")
+        print(f"Error al actualizar el chofer {id_chofer if id_chofer is not None else ''}")
         print(e)
-        
+
+
 def eliminar_chofer():
+    id_chofer = None
     try:
         chofer_dao = ChoferDAO()
         print("Lista de choferes disponibles: ")
         ver_choferes()
-        id = int(input("Escribe el id del chofer a eliminar: "))
-        chofer_dao.eliminar(id)
-        print(f"El chofer {id} ha sido eliminado con éxito")
+        id_chofer = int(input("Escribe el id del chofer a eliminar: "))
+        chofer_dao.eliminar(id_chofer)
+        print(f"El chofer {id_chofer} ha sido eliminado con éxito")
     except Exception as e:
-        print(f"Error al eliminar el chofer {id}")
+        print(f"Error al eliminar el chofer {id_chofer if id_chofer is not None else ''}")
         print(e)
-
 #============================================================#
 from dao.ruta_dao import RutaDAO
 from models.ruta import Ruta
+
 
 def ver_rutas():
     try:
@@ -380,62 +429,124 @@ def ver_rutas():
         if len(rutas) == 0:
             print("No hay rutas registradas.")
         else:
-            for ruta in rutas: 
+            for ruta in rutas:
                 print("====================================")
                 print(
                     f"ID: {ruta.id}, Nombre: {ruta.nombre}, "
                     f"Origen: {ruta.origen}, Destino: {ruta.destino}, "
-                    f"Tiempo estimado: {ruta.tiempo_estimado}"
+                    f"Tiempo estimado: {ruta.tiempo_estimado}, "
+                    f"Tarifa: {ruta.tarifa}, Observaciones: {ruta.observaciones}"
                 )
                 print("====================================")
-        print("\n Conexión exitosa a la base de datos")
+        print("\nConexión exitosa a la base de datos")
     except Exception as e:
         print("Error: ")
         print(e)
-        
+
+
+def _pedir_tarifa(mensaje):
+    """Pide una tarifa entera y reintenta si no es un número válido."""
+    while True:
+        valor = input(mensaje)
+        if not valor.strip():
+            return None
+        try:
+            return int(valor)
+        except ValueError:
+            print("La tarifa debe ser un número entero (ej. 25). Intenta de nuevo.")
+
+
 def insertar_rutas():
-    nombre = input("Escribe el nombre de la ruta nueva: ")
-    origen = input("Escribe el origen de la ruta nueva: ")
-    destino = input("Escribe el destino de la ruta nueva: ")
-    tiempo_estimado = input("Escribe el tiempo estimado de la ruta nueva: ")
     try:
+        nombre = input("Escribe el nombre de la ruta nueva: ")
+        origen = input("Escribe el origen de la ruta nueva: ")
+        destino = input("Escribe el destino de la ruta nueva: ")
+        tiempo_estimado = input("Escribe el tiempo estimado de la ruta nueva (HH:MM:SS): ")
+        tarifa = _pedir_tarifa("Escribe la tarifa de la ruta nueva en pesos (opcional): ")
+        observaciones = input("Escribe observaciones de la ruta nueva (opcional): ")
+
         ruta_dao = RutaDAO()
         id_ruta = ruta_dao.obtener_ultimo_id() + 1
-        ruta = Ruta(id_ruta, nombre, origen, destino, tiempo_estimado)
+
+        ruta = Ruta(
+            id=id_ruta,
+            nombre=nombre,
+            origen=origen,
+            destino=destino,
+            tiempo_estimado=tiempo_estimado,
+            observaciones=observaciones if observaciones.strip() else None,
+            tarifa=tarifa,
+        )
         ruta_dao.insertar(ruta)
         print("Inserción realizada con éxito")
     except Exception as e:
-        print("Error al insertar un nuevo chofer")
+        print("Error al insertar una nueva ruta")
         print(e)
 
+
 def actualizar_rutas():
-    print("Selecciona al usuario a actualizar")
+    print("Selecciona la ruta a actualizar")
+    id_ruta = None
     try:
         ruta_dao = RutaDAO()
         ver_rutas()
-        id = int(input("Escribe el id de la ruta a actualizar: "))
-        nombre = input("Escribe el nuevo nombre: ")
-        origen = input("Escribe el nuevo origen: ")
-        destino = input("Escribe el nuevo destino: ")
-        tiempo_estimado = input("Escribe el nuevo tiempo estimado: ")
-        ruta = Ruta (id, nombre, origen, destino, tiempo_estimado)
+        id_ruta = int(input("Escribe el id de la ruta a actualizar: "))
+
+        rutas = ruta_dao.obtener_todos()
+        ruta_actual = next((r for r in rutas if r.id == id_ruta), None)
+
+        if ruta_actual is None:
+            print(f"No se encontró ninguna ruta con id {id_ruta}")
+            return
+
+        def pedir(etiqueta, valor_actual):
+            nuevo = input(f"{etiqueta} (actual: {valor_actual}) - Enter para no cambiar: ")
+            return nuevo.strip() if nuevo.strip() else valor_actual
+
+        nombre = pedir("Nuevo nombre", ruta_actual.nombre)
+        origen = pedir("Nuevo origen", ruta_actual.origen)
+        destino = pedir("Nuevo destino", ruta_actual.destino)
+        tiempo_estimado = pedir("Nuevo tiempo estimado (HH:MM:SS)", ruta_actual.tiempo_estimado)
+        observaciones = pedir("Nuevas observaciones", ruta_actual.observaciones)
+
+        nueva_tarifa = input(f"Nueva tarifa (actual: {ruta_actual.tarifa}) - Enter para no cambiar: ")
+        if nueva_tarifa.strip():
+            try:
+                tarifa = int(nueva_tarifa)
+            except ValueError:
+                print("Tarifa inválida, se conserva la tarifa actual.")
+                tarifa = ruta_actual.tarifa
+        else:
+            tarifa = ruta_actual.tarifa
+
+        ruta = Ruta(
+            id=id_ruta,
+            nombre=nombre,
+            origen=origen,
+            destino=destino,
+            tiempo_estimado=tiempo_estimado,
+            observaciones=observaciones,
+            tarifa=tarifa,
+        )
         ruta_dao.actualizar(ruta)
-        print(f"La ruta {id} se ha actualizado exitosamente")
+        print(f"La ruta {id_ruta} se ha actualizado exitosamente")
 
     except Exception as e:
-        print("Error al actualizar una ruta")
+        print(f"Error al actualizar la ruta {id_ruta if id_ruta is not None else ''}")
         print(e)
-        
+
+
 def eliminar_rutas():
+    id_ruta = None
     try:
         ruta_dao = RutaDAO()
         print("Lista de rutas disponibles: ")
         ver_rutas()
-        id = int(input("Escribe el id de la ruta a eliminar: "))
-        ruta_dao.eliminar(id)
-        print(f"La ruta {id} ha sido eliminado con éxito")
+        id_ruta = int(input("Escribe el id de la ruta a eliminar: "))
+        ruta_dao.eliminar(id_ruta)
+        print(f"La ruta {id_ruta} ha sido eliminada con éxito")
     except Exception as e:
-        print(f"Error al eliminar la ruta {id}")
+        print(f"Error al eliminar la ruta {id_ruta if id_ruta is not None else ''}")
         print(e)
 
 #============================================================#
