@@ -9,8 +9,15 @@ class ChoferDAO:
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
 
-        cursor.execute("SELECT * FROM choferes")
-        registros = cursor.fetchall()
+        try:
+            cursor.execute("SELECT * FROM choferes")
+            registros = cursor.fetchall()
+        except Exception as ex:
+            print(f"[ChoferDAO] Error en obtener_todos: {ex}")
+            registros = []
+        finally:
+            cursor.close()
+            conexion.close()
 
         choferes = []
         for registro in registros:
@@ -28,20 +35,52 @@ class ChoferDAO:
             )
             choferes.append(chofer)
 
-        cursor.close()
-        conexion.close()
-
         return choferes
 
     def buscar_por_nombre(self, filtro):
+        """
+        Busca choferes cuyo nombre, telefono, licencia, tipo de licencia o
+        estatus coincidan (parcialmente) con el filtro ingresado.
+        Usa ILIKE en vez de LIKE para que la busqueda no distinga entre
+        mayusculas y minusculas (ej. "carlos" encuentra "Carlos Mendoza").
+
+        telefono se castea a ::text porque en la base de datos esa columna
+        es de tipo numerico (bigint), y el operador ILIKE solo funciona
+        sobre texto.
+
+        Si ocurre cualquier error (de conexion, de tipos de columna, etc.)
+        se captura, se imprime en consola y se devuelve una lista vacia en
+        vez de None, para que la vista nunca reciba algo no iterable.
+        """
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
 
-        cursor.execute(
-            "SELECT * FROM choferes WHERE nombre LIKE %s",
-            (f"%{filtro}%",)
-        )
-        registros = cursor.fetchall()
+        patron = f"%{filtro}%"
+        registros = []
+
+        try:
+            cursor.execute(
+                """
+                SELECT * FROM choferes
+                WHERE nombre ILIKE %s
+                   OR telefono::text ILIKE %s
+                   OR licencia ILIKE %s
+                   OR tipo_licencia ILIKE %s
+                   OR estatus ILIKE %s
+                """,
+                (patron, patron, patron, patron, patron)
+            )
+            registros = cursor.fetchall()
+        except Exception as ex:
+            print(f"[ChoferDAO] Error en buscar_por_nombre: {ex}")
+            try:
+                conexion.rollback()
+            except Exception:
+                pass
+            registros = []
+        finally:
+            cursor.close()
+            conexion.close()
 
         choferes = []
         for registro in registros:
@@ -57,9 +96,6 @@ class ChoferDAO:
                 observaciones=registro[8] if len(registro) > 8 else None
             )
             choferes.append(chofer)
-
-        cursor.close()
-        conexion.close()
 
         return choferes
 
@@ -133,26 +169,41 @@ class ChoferDAO:
 
     def eliminar(self, chofer_id):
         """
-        Elimina un chofer de forma definitiva.
-        Si el chofer tiene pagos asociados (fk_pago_chofer), la BD rechaza
-        el borrado con ForeignKeyViolation. En ese caso, capturamos el error
-        y lanzamos un ValueError con un mensaje claro para mostrar en la UI,
-        en vez de dejar que el traceback crudo de psycopg2 llegue a la vista.
+        Elimina un chofer de forma definitiva, junto con sus pagos asociados
+        (borrado en cascada manual, ya que la FK en la BD no tiene ON DELETE
+        CASCADE configurado).
+
+        La tabla "pago" referencia al chofer mediante la columna "id_chofer".
+
+        Ambos DELETE se ejecutan dentro de la misma transacción: si algo
+        falla a mitad de camino, se hace rollback completo y no queda nada
+        a medias (ni el chofer ni los pagos se eliminan).
         """
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
 
         try:
+            # 1) Borra primero los pagos asociados a este chofer
+            cursor.execute(
+                "DELETE FROM pago WHERE id_chofer = %s",
+                (chofer_id,)
+            )
+
+            # 2) Ahora sí borra al chofer, ya sin pagos que lo bloqueen
             cursor.execute(
                 "DELETE FROM choferes WHERE id = %s",
                 (chofer_id,)
             )
+
             conexion.commit()
         except psycopg2.errors.ForeignKeyViolation:
+            # Puede seguir ocurriendo si existe OTRA tabla con FK hacia
+            # choferes que no sea "pago" (ej. viajes, unidades asignadas).
             conexion.rollback()
             raise ValueError(
-                "No se puede eliminar este chofer porque tiene pagos registrados. "
-                "Cámbialo a estatus 'Inactivo' en vez de eliminarlo."
+                "No se puede eliminar este chofer porque tiene registros "
+                "relacionados en otras tablas. Cámbialo a estatus 'Inactivo' "
+                "en vez de eliminarlo."
             )
         except Exception:
             conexion.rollback()

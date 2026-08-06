@@ -1,9 +1,19 @@
+import re
+import flet as ft
 from dao.usuario_dao import UsuarioDAO
 from models.usuario import Usuario
-import flet as ft
 
-def vista_registro(page: ft.Page, ir_a):  
-    # --- CAMPOS DE ENTRADA ---
+
+def vista_registro(page: ft.Page, ir_a):
+    dao = UsuarioDAO()
+
+    def limpiar_errores(e=None):
+        txt_nombre.error_text = None
+        txt_email.error_text = None
+        txt_password.error_text = None
+        txt_confirm_password.error_text = None
+        page.update()
+
     txt_nombre = ft.TextField(
         label="Nombre completo",
         hint_text="ej. Juan Ramos Alcaraz",
@@ -12,6 +22,7 @@ def vista_registro(page: ft.Page, ir_a):
         border_radius=8,
         border_color=ft.Colors.TRANSPARENT,
         focused_border_color="#3B82F6",
+        on_change=limpiar_errores,
     )
 
     txt_email = ft.TextField(
@@ -22,11 +33,12 @@ def vista_registro(page: ft.Page, ir_a):
         border_radius=8,
         border_color=ft.Colors.TRANSPARENT,
         focused_border_color="#3B82F6",
+        on_change=limpiar_errores,
     )
 
     txt_password = ft.TextField(
         label="Contraseña",
-        hint_text="••••••••",
+        hint_text="Mínimo 8 caracteres",
         password=True,
         can_reveal_password=True,
         filled=True,
@@ -34,6 +46,7 @@ def vista_registro(page: ft.Page, ir_a):
         border_radius=8,
         border_color=ft.Colors.TRANSPARENT,
         focused_border_color="#3B82F6",
+        on_change=limpiar_errores,
     )
 
     txt_confirm_password = ft.TextField(
@@ -46,76 +59,129 @@ def vista_registro(page: ft.Page, ir_a):
         border_radius=8,
         border_color=ft.Colors.TRANSPARENT,
         focused_border_color="#3B82F6",
+        on_change=limpiar_errores,
     )
 
-    # --- LÓGICA DE REGISTRO ---
+    def mostrar_snack(mensaje, color):
+        snack = ft.SnackBar(content=ft.Text(mensaje), bgcolor=color)
+        page.overlay.append(snack)
+        snack.open = True
+        page.update()
+
+    def validar_formulario(nombre, correo, contrasena, confirmar):
+        valido = True
+        errores = []
+
+        if not nombre:
+            txt_nombre.error_text = "Ingresa tu nombre completo"
+            errores.append("Falta el nombre completo")
+            valido = False
+        elif len(nombre) < 3:
+            txt_nombre.error_text = "El nombre debe tener al menos 3 caracteres"
+            errores.append("El nombre es demasiado corto")
+            valido = False
+
+        patron_correo = r"^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$"
+        if not correo:
+            txt_email.error_text = "Ingresa tu correo electrónico"
+            errores.append("Falta el correo electrónico")
+            valido = False
+        elif not re.match(patron_correo, correo):
+            txt_email.error_text = "Correo no válido (ej. nombre@dominio.com)"
+            errores.append("El correo no tiene un formato válido")
+            valido = False
+
+        if not contrasena:
+            txt_password.error_text = "Ingresa una contraseña"
+            errores.append("Falta la contraseña")
+            valido = False
+        elif len(contrasena) < 8:
+            txt_password.error_text = "Debe tener al menos 8 caracteres"
+            errores.append("La contraseña debe tener al menos 8 caracteres")
+            valido = False
+
+        if not confirmar:
+            txt_confirm_password.error_text = "Confirma tu contraseña"
+            errores.append("Falta confirmar la contraseña")
+            valido = False
+        elif contrasena and confirmar and contrasena != confirmar:
+            txt_confirm_password.error_text = "Las contraseñas no coinciden"
+            errores.append("Las contraseñas no coinciden")
+            valido = False
+
+        page.update()
+        return valido, errores
+
     def procesar_registro(e):
-        nombre = txt_nombre.value.strip()
-        correo = txt_email.value.strip()
-        contrasena = txt_password.value.strip()
-        confirmar = txt_confirm_password.value.strip()
+        print("=== CLIC EN REGISTRARME DETECTADO ===")
+        limpiar_errores()
 
-        if not nombre or not correo or not contrasena or not confirmar:
-            page.open(
-                ft.SnackBar(
-                    ft.Text("Por favor, llena todos los campos"),
-                    bgcolor="orange"
-                )
-            )
-            return
+        nombre = (txt_nombre.value or "").strip()
+        correo = (txt_email.value or "").strip().lower()
+        contrasena = (txt_password.value or "").strip()
+        confirmar = (txt_confirm_password.value or "").strip()
 
-        if contrasena != confirmar:
-            page.open(
-                ft.SnackBar(
-                    ft.Text("Las contraseñas no coinciden"),
-                    bgcolor="red"
-                )
-            )
+        # Diagnóstico SIN exponer la contraseña real
+        patron_correo_diag = r"^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$"
+        correo_es_valido = bool(re.match(patron_correo_diag, correo))
+        print(
+            f"nombre={nombre!r} | correo={correo!r} | "
+            f"len_pass={len(contrasena)} | len_confirm={len(confirmar)} | "
+            f"coinciden={contrasena == confirmar} | "
+            f"correo_valido={correo_es_valido}"
+        )
+
+        valido, errores = validar_formulario(nombre, correo, contrasena, confirmar)
+        if not valido:
+            print("Validación falló:", errores)
+            mostrar_snack(" | ".join(errores), "red")
             return
 
         try:
-            dao = UsuarioDAO()
-            nuevo_id = dao.obtener_ultimo_id() + 1
-            
+            print("Verificando si el correo ya existe...")
+            if dao.correo_existe(correo):
+                txt_email.error_text = "Ese correo ya está registrado"
+                mostrar_snack("Ese correo ya está registrado", "red")
+                page.update()
+                return
+
+            print("Registrando usuario...")
             nuevo_usuario = Usuario(
-                id=nuevo_id,
                 nombre=nombre,
                 correo=correo,
                 contrasena=contrasena,
-                rol="usuario"
+                rol="usuario",
             )
-
             dao.registrar(nuevo_usuario)
+            print("Usuario registrado correctamente")
 
-            page.open(
-                ft.SnackBar(
-                    ft.Text("¡Registro exitoso! Por favor inicia sesión"),
-                    bgcolor="green"
-                )
-            )
-            ir_a("login")
+            usuario_logueado = dao.login(correo, contrasena)
+            if usuario_logueado is not None:
+                page.usuario_actual = usuario_logueado
+                mostrar_snack(f"¡Bienvenido {usuario_logueado.nombre}!", "green")
+                ir_a("menu_principal")
+            else:
+                mostrar_snack("Registro exitoso. Por favor inicia sesión.", "green")
+                ir_a("login")
 
         except Exception as ex:
-            print("Error al registrar:", ex)
-            page.open(
-                ft.SnackBar(
-                    ft.Text("Error al guardar el usuario en la base de datos"),
-                    bgcolor="red"
-                )
-            )
+            print("!!! ERROR AL REGISTRAR:", repr(ex))
+            mensaje_error = str(ex).lower()
+            if "duplicate" in mensaje_error or "unique" in mensaje_error:
+                txt_email.error_text = "Ese correo ya está registrado"
+                page.update()
+                mostrar_snack("Ese correo ya está registrado", "red")
+            elif "correo" in mensaje_error:
+                mostrar_snack("El correo no se pudo guardar correctamente", "red")
+            else:
+                mostrar_snack("No se pudo completar el registro. Verifica los datos e intenta de nuevo.", "red")
 
-    # --- LOGO (Esquina superior izquierda) ---
     logo_uniruta = ft.Container(
         top=25,
         left=30,
-        content=ft.Image(
-            src="logo_uniruta.png", 
-            width=130, 
-            fit="contain"
-        )
+        content=ft.Image(src="logo_uniruta.png", width=130, fit="contain"),
     )
 
-    # --- TEXTO CON LÍNEA "BIENVENIDO AL SISTEMA DE UNIRUTA" ---
     seccion_bienvenida = ft.Container(
         top=180,
         left=210,
@@ -123,34 +189,23 @@ def vista_registro(page: ft.Page, ir_a):
             horizontal_alignment=ft.CrossAxisAlignment.START,
             spacing=10,
             controls=[
-                # Línea horizontal azul encima del texto
-                ft.Container(
-                    width=280,
-                    height=3,
-                    bgcolor="#2B5B84"
-                ),
+                ft.Container(width=280, height=3, bgcolor="#2B5B84"),
                 ft.Text(
-                    "Bienvenido al\nsistema de\nUNIRUTA", 
-                    size=42, 
-                    weight=ft.FontWeight.NORMAL, 
-                    color="#2C3E50"
-                )
-            ]
-        )
+                    "Bienvenido al\nsistema de\nUNIRUTA",
+                    size=42,
+                    weight=ft.FontWeight.NORMAL,
+                    color="#2C3E50",
+                ),
+            ],
+        ),
     )
 
-    # --- ILUSTRACIÓN DE BAILARINES ---
     ilustracion_personajes = ft.Container(
         left=30,
         bottom=20,
-        content=ft.Image(
-            src="bailarines.png", 
-            width=360, 
-            fit="contain"
-        )
+        content=ft.Image(src="bailarines.png", width=360, fit="contain"),
     )
 
-    # --- TARJETA DE REGISTRO ---
     card_registro = ft.Container(
         top=140,
         right=260,
@@ -170,17 +225,14 @@ def vista_registro(page: ft.Page, ir_a):
                 ft.Container(
                     alignment=ft.Alignment(0, 0),
                     content=ft.Text(
-                        "Registrate", 
-                        size=22, 
-                        weight=ft.FontWeight.BOLD, 
-                        color="#1B2559"
-                    )
+                        "Registrate", size=22, weight=ft.FontWeight.BOLD, color="#1B2559"
+                    ),
                 ),
                 txt_nombre,
                 txt_email,
                 txt_password,
                 txt_confirm_password,
-                ft.Container(height=5), # Espaciador pequeño
+                ft.Container(height=5),
                 ft.ElevatedButton(
                     "Registrarme",
                     bgcolor="#3B82F6",
@@ -195,8 +247,13 @@ def vista_registro(page: ft.Page, ir_a):
                     controls=[
                         ft.Text("¿Ya tienes una cuenta?", size=11, color="grey"),
                         ft.TextButton(
-                            content=ft.Text("Iniciar sesión", size=11, color="#3B82F6", weight=ft.FontWeight.BOLD),
-                            on_click=lambda e: ir_a("login"), # 👈 Te regresa directo a Iniciar Sesión
+                            content=ft.Text(
+                                "Iniciar sesión",
+                                size=11,
+                                color="#3B82F6",
+                                weight=ft.FontWeight.BOLD,
+                            ),
+                            on_click=lambda e: ir_a("login"),
                         ),
                     ],
                 ),
@@ -204,30 +261,16 @@ def vista_registro(page: ft.Page, ir_a):
         ),
     )
 
-    # --- CÍRCULOS Y DETALLES DE FONDO ---
     circulo_inferior_izq = ft.Container(
-        width=650, 
-        height=650, 
-        bgcolor="#52A1C1", 
-        border_radius=325, 
-        left=-180, 
-        bottom=-180
+        width=650, height=650, bgcolor="#52A1C1", border_radius=325, left=-180, bottom=-180
     )
     circulo_superior_der = ft.Container(
-        width=650, 
-        height=650, 
-        bgcolor="#7CBAD0", 
-        border_radius=325, 
-        right=-100, 
-        top=-100
+        width=650, height=650, bgcolor="#7CBAD0", border_radius=325, right=-100, top=-100
     )
     icono_bus_esquina = ft.Container(
-        right=30, 
-        bottom=20, 
-        content=ft.Icon(ft.Icons.DIRECTIONS_BUS, size=45, color="#94A3B8")
+        right=30, bottom=20, content=ft.Icon(ft.Icons.DIRECTIONS_BUS, size=45, color="#94A3B8")
     )
 
-    # --- ESTRUCTURA PRINCIPAL ---
     return ft.Container(
         expand=True,
         bgcolor="#FFFFFF",

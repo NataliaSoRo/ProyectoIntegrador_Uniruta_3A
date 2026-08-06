@@ -1,6 +1,7 @@
 import flet as ft
 from datetime import datetime
 import traceback
+import unicodedata
 
 try:
     from dao.chofer_dao import ChoferDAO
@@ -9,6 +10,15 @@ except ImportError as ex:
     print(f"[vista_choferes] ERROR al importar ChoferDAO/Chofer: {ex}")
     ChoferDAO = None
     Chofer = None
+
+
+def normalizar_texto(texto):
+    """Quita espacios, mayúsculas y acentos para comparar de forma segura."""
+    if texto is None:
+        return ""
+    texto = str(texto).strip().lower()
+    texto = unicodedata.normalize("NFKD", texto).encode("ASCII", "ignore").decode("ASCII")
+    return texto
 
 
 # ==========================================
@@ -63,17 +73,24 @@ def vista_choferes(page: ft.Page, ir_a):
         page.overlay.append(snack_exito)
 
     def mostrar_exito(mensaje):
-        snack_exito.content.controls[1].value = mensaje
-        snack_exito.bgcolor = "#10B981"
-        snack_exito.content.controls[0].name = ft.Icons.CHECK_CIRCLE
-        _mostrar_snack()
+        try:
+            snack_exito.content.controls[1].value = mensaje
+            snack_exito.bgcolor = "#10B981"
+            snack_exito.content.controls[0].name = ft.Icons.CHECK_CIRCLE
+            _mostrar_snack()
+        except Exception as ex:
+            print(f"[vista_choferes] Error al mostrar snackbar de éxito: {ex}")
+            traceback.print_exc()
 
-    # --- SNACKBAR DE ERROR (validaciones) ---
     def mostrar_error(mensaje):
-        snack_exito.content.controls[1].value = mensaje
-        snack_exito.bgcolor = "#EF4444"
-        snack_exito.content.controls[0].name = ft.Icons.ERROR_OUTLINE
-        _mostrar_snack()
+        try:
+            snack_exito.content.controls[1].value = mensaje
+            snack_exito.bgcolor = "#EF4444"
+            snack_exito.content.controls[0].name = ft.Icons.ERROR_OUTLINE
+            _mostrar_snack()
+        except Exception as ex:
+            print(f"[vista_choferes] Error al mostrar snackbar de error: {ex}")
+            traceback.print_exc()
 
     def _mostrar_snack():
         if hasattr(page, "open"):
@@ -107,50 +124,6 @@ def vista_choferes(page: ft.Page, ir_a):
         )
         abrir_dialogo(dialogo)
 
-    def abrir_perfil(e):
-        dialogo_perfil = ft.AlertDialog(
-            title=ft.Row(
-                spacing=10,
-                controls=[
-                    ft.Icon(ft.Icons.ACCOUNT_CIRCLE, color="#0E4A5B", size=28),
-                    ft.Text("Mi Perfil", weight=ft.FontWeight.BOLD, size=18, color="#0F172A"),
-                ],
-            ),
-            content=ft.Container(
-                width=320,
-                padding=ft.Padding(10, 10, 10, 10),
-                content=ft.Column(
-                    tight=True,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=12,
-                    controls=[
-                        ft.CircleAvatar(
-                            content=ft.Icon(ft.Icons.PERSON, size=36, color="white"),
-                            bgcolor="#0E4A5B",
-                            radius=32,
-                        ),
-                        ft.Text(nombre_usuario, size=16, weight=ft.FontWeight.BOLD, color="#0F172A"),
-                        ft.Container(
-                            bgcolor="#E0F2FE",
-                            border_radius=12,
-                            padding=ft.Padding(10, 4, 10, 4),
-                            content=ft.Text(rol_usuario, size=11, color="#0369A1", weight=ft.FontWeight.BOLD),
-                        ),
-                        ft.Divider(height=1, color="#E2E8F0"),
-                        ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.EMAIL_OUTLINED, size=16, color="#64748B"),
-                                ft.Text(correo_usuario, size=12, color="#334155"),
-                            ]
-                        ),
-                    ],
-                ),
-            ),
-            actions=[ft.TextButton("Cerrar", on_click=lambda e: cerrar_dialogo(dialogo_perfil))],
-        )
-        abrir_dialogo(dialogo_perfil)
-
-    # AUXILIARES PARA MANEJAR DIÁLOGOS (compatible con distintas versiones de Flet)
     def abrir_dialogo(dlg):
         if hasattr(page, "open"):
             page.open(dlg)
@@ -172,7 +145,7 @@ def vista_choferes(page: ft.Page, ir_a):
     logo_header = ft.Container(
         padding=ft.Padding(15, 8, 15, 8),
         on_click=lambda e: ir_a("menu_principal"),
-        content=ft.Image(src="logo_uniruta.png", height=42, fit=ft.BoxFit.CONTAIN),
+        content=ft.Image(src="logo_uniruta.png", height=42, fit="contain"),
     )
 
     info_usuario = ft.Row(
@@ -209,7 +182,7 @@ def vista_choferes(page: ft.Page, ir_a):
                     ft.PopupMenuItem(
                         icon=ft.Icons.PERSON_OUTLINE,
                         content=ft.Text("Mi Perfil", size=13),
-                        on_click=abrir_perfil,
+                        on_click=lambda e: ir_a("perfil"),
                     ),
                     ft.PopupMenuItem(
                         icon=ft.Icons.SETTINGS_OUTLINED,
@@ -386,7 +359,6 @@ def vista_choferes(page: ft.Page, ir_a):
         content=txt_no_licencia_inner,
     )
 
-    # --- DROPDOWN DE ESTATUS (4 opciones: Activo, Inactivo, Licencia, Dado de baja) ---
     dd_estatus_inner = ft.Dropdown(
         hint_text="Seleccionar estatus",
         border=ft.InputBorder.NONE,
@@ -410,7 +382,6 @@ def vista_choferes(page: ft.Page, ir_a):
         content=dd_estatus_inner,
     )
 
-    # --- CAMPO DE OBSERVACIONES (nuevo) ---
     txt_observaciones_inner = ft.TextField(
         hint_text="EJ. Cubre turno nocturno, sin restricciones",
         border=ft.InputBorder.NONE,
@@ -445,7 +416,8 @@ def vista_choferes(page: ft.Page, ir_a):
     def guardar_chofer(e):
         nonlocal id_chofer_edicion
 
-        # --- Validación de campos obligatorios ---
+        print("[vista_choferes] guardar_chofer: click en Aceptar")
+
         if not txt_nombre_inner.value or not str(txt_nombre_inner.value).strip():
             mostrar_error("El nombre completo es obligatorio")
             return
@@ -483,33 +455,36 @@ def vista_choferes(page: ft.Page, ir_a):
             tipo_licencia=dd_tipo_licencia_inner.value,
             vigen_licencia=txt_vigencia_inner.value,
             foto=txt_foto_inner.value if txt_foto_inner.value else None,
-            estatus=dd_estatus_inner.value,  # viene del dropdown, editable por el usuario
-            observaciones=observaciones_valor,  # nuevo
+            estatus=dd_estatus_inner.value,
+            observaciones=observaciones_valor,
         )
 
-        exito = False
         mensaje = ""
 
         try:
             if id_chofer_edicion is None:
                 dao.insertar(chofer_obj)
-                exito = True
                 mensaje = "Chofer ingresado con éxito"
             else:
                 dao.actualizar(chofer_obj)
-                exito = True
                 mensaje = "Chofer actualizado con éxito"
-        except Exception as ex:
-            print(f"[vista_choferes] Error al guardar/actualizar: {ex}")
+            print(f"[vista_choferes] guardar_chofer: guardado en BD OK -> {mensaje}")
+        except Exception:
+            print(f"[vista_choferes] ERROR al guardar/actualizar en BD:")
+            traceback.print_exc()
             mostrar_error("Ocurrió un error al guardar el chofer (revisa la consola/terminal)")
             return
 
-        restablecer_formulario()
-        cerrar_dialogo(modal_agregar)
-        cargar_datos_tabla()
+        try:
+            restablecer_formulario()
+            cerrar_dialogo(modal_agregar)
+            cargar_datos_tabla()
+            print("[vista_choferes] guardar_chofer: UI refrescada OK")
+        except Exception:
+            print(f"[vista_choferes] ERROR al refrescar la UI tras guardar:")
+            traceback.print_exc()
 
-        if exito:
-            mostrar_exito(mensaje)
+        mostrar_exito(mensaje)
 
     def cancelar_modal(e):
         restablecer_formulario()
@@ -596,8 +571,6 @@ def vista_choferes(page: ft.Page, ir_a):
         observaciones_val = obtener_valor(chofer_item, "observaciones", "")
         txt_observaciones_inner.value = str(observaciones_val) if observaciones_val else ""
 
-        # Sincroniza el DatePicker con la fecha actual, para que el calendario
-        # abra en la vigencia ya registrada en vez de la fecha por defecto
         try:
             date_picker.value = datetime.strptime(txt_vigencia_inner.value, "%Y-%m-%d")
         except (ValueError, TypeError):
@@ -605,7 +578,6 @@ def vista_choferes(page: ft.Page, ir_a):
 
         abrir_dialogo(modal_agregar)
 
-    # --- MODAL DE AVISO: NO SE PUEDE ELIMINAR (chofer no dado de baja) ---
     def mostrar_aviso_no_se_puede_eliminar(nombre_chofer, estatus_chofer):
         dialogo_aviso = ft.AlertDialog(
             bgcolor="white",
@@ -648,7 +620,6 @@ def vista_choferes(page: ft.Page, ir_a):
         )
         abrir_dialogo(dialogo_aviso)
 
-    # --- MODAL: VER OBSERVACIÓN COMPLETA ---
     def mostrar_observacion(nombre_chofer, observacion):
         dialogo_observacion = ft.AlertDialog(
             bgcolor="white",
@@ -702,10 +673,17 @@ def vista_choferes(page: ft.Page, ir_a):
             mostrar_error("No se pudo identificar al chofer a eliminar")
             return
 
-        # Solo se permite eliminar choferes que estén "Dado de baja".
-        # Si tiene cualquier otro estatus (Activo, Inactivo, Licencia), se bloquea
-        # con un aviso emergente (AlertDialog).
-        estatus_norm = str(estatus_chofer or "").strip().lower()
+        # Comparación robusta: quita espacios, mayúsculas y acentos, para que
+        # variaciones como "Dado De Baja", " dado de baja ", "dado de baja"
+        # o incluso "dado de bája" (typo con acento) sí se reconozcan.
+        estatus_norm = normalizar_texto(estatus_chofer)
+
+        print(
+            f"[vista_choferes] confirmar_eliminar -> id={id_chofer!r}, "
+            f"nombre={nombre_chofer!r}, estatus_original={estatus_chofer!r}, "
+            f"estatus_normalizado={estatus_norm!r}"
+        )
+
         if estatus_norm != "dado de baja":
             mostrar_aviso_no_se_puede_eliminar(nombre_chofer, estatus_chofer)
             return
@@ -720,23 +698,30 @@ def vista_choferes(page: ft.Page, ir_a):
 
                 dao.eliminar(id_chofer)
                 print(f"[vista_choferes] dao.eliminar({id_chofer!r}) ejecutado sin excepción")
-                cargar_datos_tabla()
-                cerrar_dialogo(dialogo_eliminar)
-                mostrar_exito("Chofer eliminado con éxito")
             except ValueError as ve:
-                # Error de negocio esperado (ej. FK violation por pagos asociados).
-                # dao.eliminar() ya nos da un mensaje amigable, lo mostramos tal cual.
                 print(f"[vista_choferes] No se pudo eliminar: {ve}")
                 cerrar_dialogo(dialogo_eliminar)
                 mostrar_error(str(ve))
+                return
             except Exception:
-                print("[vista_choferes] EXCEPCIÓN al eliminar:")
+                print("[vista_choferes] EXCEPCIÓN al eliminar en BD:")
                 traceback.print_exc()
                 try:
                     cerrar_dialogo(dialogo_eliminar)
                 except Exception:
                     pass
                 mostrar_error("Ocurrió un error al eliminar el chofer (revisa la consola/terminal)")
+                return
+
+            try:
+                cerrar_dialogo(dialogo_eliminar)
+                cargar_datos_tabla()
+                print("[vista_choferes] borrar_y_cerrar: UI refrescada OK")
+            except Exception:
+                print("[vista_choferes] ERROR al refrescar la UI tras eliminar:")
+                traceback.print_exc()
+
+            mostrar_exito("Chofer eliminado con éxito")
 
         dialogo_eliminar = ft.AlertDialog(
             bgcolor="white",
@@ -790,7 +775,7 @@ def vista_choferes(page: ft.Page, ir_a):
         content_padding=ft.Padding(10, 0, 10, 0),
         text_size=12,
         prefix_icon=ft.Icons.SEARCH,
-        on_change=lambda e: cargar_datos_tabla(e.control.value),
+        on_change=lambda e: cargar_datos_tabla(e.control.value or ""),
     )
 
     container_buscar = ft.Container(
@@ -830,20 +815,29 @@ def vista_choferes(page: ft.Page, ir_a):
     def color_por_estatus(estatus_str):
         e = estatus_str.strip().lower()
         if e in ("activo", "disponible"):
-            return "#10B981"       # verde
+            return "#10B981"
         if e == "licencia":
-            return "#F59E0B"       # ámbar
+            return "#F59E0B"
         if e == "dado de baja":
-            return "#EF4444"       # rojo
-        return "#64748B"           # gris (inactivo u otro)
+            return "#EF4444"
+        return "#64748B"
 
     def cargar_datos_tabla(filtro=""):
+        filtro = filtro or ""
+
         lista = []
         if dao:
-            if filtro.strip() and hasattr(dao, "buscar_por_nombre"):
-                lista = dao.buscar_por_nombre(filtro)
-            elif hasattr(dao, "obtener_todos"):
-                lista = dao.obtener_todos()
+            try:
+                if filtro.strip() and hasattr(dao, "buscar_por_nombre"):
+                    lista = dao.buscar_por_nombre(filtro)
+                elif hasattr(dao, "obtener_todos"):
+                    lista = dao.obtener_todos()
+            except Exception:
+                print(f"[vista_choferes] Error al cargar datos de la tabla:")
+                traceback.print_exc()
+                lista = []
+
+        lista = lista or []
 
         filas = []
         for idx, c in enumerate(lista, start=1):

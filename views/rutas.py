@@ -92,49 +92,6 @@ def vista_rutas(page: ft.Page, ir_a):
         )
         abrir_dialogo(dialogo)
 
-    def abrir_perfil(e):
-        dialogo_perfil = ft.AlertDialog(
-            title=ft.Row(
-                spacing=10,
-                controls=[
-                    ft.Icon(ft.Icons.ACCOUNT_CIRCLE, color="#0E4A5B", size=28),
-                    ft.Text("Mi Perfil", weight=ft.FontWeight.BOLD, size=18, color="#0F172A"),
-                ],
-            ),
-            content=ft.Container(
-                width=320,
-                padding=ft.Padding(10, 10, 10, 10),
-                content=ft.Column(
-                    tight=True,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=12,
-                    controls=[
-                        ft.CircleAvatar(
-                            content=ft.Icon(ft.Icons.PERSON, size=36, color="white"),
-                            bgcolor="#0E4A5B",
-                            radius=32,
-                        ),
-                        ft.Text(nombre_usuario, size=16, weight=ft.FontWeight.BOLD, color="#0F172A"),
-                        ft.Container(
-                            bgcolor="#E0F2FE",
-                            border_radius=12,
-                            padding=ft.Padding(10, 4, 10, 4),
-                            content=ft.Text(rol_usuario, size=11, color="#0369A1", weight=ft.FontWeight.BOLD),
-                        ),
-                        ft.Divider(height=1, color="#E2E8F0"),
-                        ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.EMAIL_OUTLINED, size=16, color="#64748B"),
-                                ft.Text(correo_usuario, size=12, color="#334155"),
-                            ]
-                        ),
-                    ],
-                ),
-            ),
-            actions=[ft.TextButton("Cerrar", on_click=lambda e: cerrar_dialogo(dialogo_perfil))],
-        )
-        abrir_dialogo(dialogo_perfil)
-
     # AUXILIARES PARA MANEJAR DIÁLOGOS (compatible con distintas versiones de Flet)
     def abrir_dialogo(dlg):
         if hasattr(page, "open"):
@@ -153,11 +110,11 @@ def vista_rutas(page: ft.Page, ir_a):
             dlg.open = False
             page.update()
 
-    # --- 1. BARRA SUPERIOR (HEADER UNIFICADO) ---
+    # --- BARRA SUPERIOR (HEADER) ---
     logo_header = ft.Container(
         padding=ft.Padding(15, 8, 15, 8),
         on_click=lambda e: ir_a("menu_principal"),
-        content=ft.Image(src="logo_uniruta.png", height=42, fit=ft.BoxFit.CONTAIN),
+        content=ft.Image(src="logo_uniruta.png", height=42, fit="contain"),
     )
 
     info_usuario = ft.Row(
@@ -194,14 +151,14 @@ def vista_rutas(page: ft.Page, ir_a):
                     ft.PopupMenuItem(
                         icon=ft.Icons.PERSON_OUTLINE,
                         content=ft.Text("Mi Perfil", size=13),
-                        on_click=abrir_perfil,
+                        on_click=lambda e: ir_a("perfil"),
                     ),
                     ft.PopupMenuItem(
                         icon=ft.Icons.SETTINGS_OUTLINED,
                         content=ft.Text("Configuración", size=13),
                         on_click=lambda e: ir_a("configuracion"),
                     ),
-                    ft.PopupMenuItem(),  # Separador visual
+                    ft.PopupMenuItem(),
                     ft.PopupMenuItem(
                         icon=ft.Icons.LOGOUT,
                         content=ft.Text("Cerrar sesión", size=13),
@@ -313,17 +270,18 @@ def vista_rutas(page: ft.Page, ir_a):
         nonlocal id_ruta_edicion
 
         # --- Validación de campos obligatorios ---
+        campos_faltantes = []
         if not txt_nombre_inner.value or not str(txt_nombre_inner.value).strip():
-            mostrar_error("El nombre de la ruta es obligatorio")
-            return
+            campos_faltantes.append("Nombre de la ruta")
         if not txt_origen_inner.value or not str(txt_origen_inner.value).strip():
-            mostrar_error("El origen es obligatorio")
-            return
+            campos_faltantes.append("Origen")
         if not txt_destino_inner.value or not str(txt_destino_inner.value).strip():
-            mostrar_error("El destino es obligatorio")
-            return
+            campos_faltantes.append("Destino")
         if not txt_tiempo_inner.value or not str(txt_tiempo_inner.value).strip():
-            mostrar_error("El tiempo estimado es obligatorio")
+            campos_faltantes.append("Tiempo estimado")
+
+        if campos_faltantes:
+            mostrar_aviso_formulario_incompleto(campos_faltantes)
             return
 
         tarifa_valor = None
@@ -530,6 +488,92 @@ def vista_rutas(page: ft.Page, ir_a):
         )
         abrir_dialogo(dialogo_observacion)
 
+    # --- MODAL: AVISO DE "FORMULARIO INCOMPLETO" AL INGRESAR/EDITAR RUTA ---
+    def mostrar_aviso_formulario_incompleto(campos_faltantes):
+        texto_campos = ", ".join(campos_faltantes)
+        dialogo_aviso = ft.AlertDialog(
+            bgcolor="white",
+            shape=ft.RoundedRectangleBorder(radius=12),
+            content=ft.Container(
+                width=420,
+                padding=ft.Padding(15, 20, 15, 10),
+                content=ft.Column(
+                    tight=True,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=15,
+                    controls=[
+                        ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, color="#F59E0B", size=42),
+                        ft.Text(
+                            "Formulario incompleto",
+                            size=17,
+                            weight=ft.FontWeight.BOLD,
+                            color="#0F172A",
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.Text(
+                            "Debes llenar todos los campos obligatorios para poder "
+                            f"agregar la ruta. Falta: {texto_campos}.",
+                            size=13,
+                            color="#475569",
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.ElevatedButton(
+                            "Entendido",
+                            bgcolor="#6366F1",
+                            color="white",
+                            width=200,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20)),
+                            on_click=lambda e: cerrar_dialogo(dialogo_aviso),
+                        ),
+                    ],
+                ),
+            ),
+        )
+        abrir_dialogo(dialogo_aviso)
+
+    # --- MODAL: AVISO DE "NO SE PUEDE ELIMINAR" (igual que en choferes) ---
+    def mostrar_aviso_no_se_puede_eliminar(nombre_ruta, motivo=""):
+        dialogo_aviso = ft.AlertDialog(
+            bgcolor="white",
+            shape=ft.RoundedRectangleBorder(radius=12),
+            content=ft.Container(
+                width=420,
+                padding=ft.Padding(15, 20, 15, 10),
+                content=ft.Column(
+                    tight=True,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=15,
+                    controls=[
+                        ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, color="#F59E0B", size=42),
+                        ft.Text(
+                            "No se puede eliminar esta ruta",
+                            size=17,
+                            weight=ft.FontWeight.BOLD,
+                            color="#0F172A",
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.Text(
+                            motivo
+                            or f"\"{nombre_ruta or 'Esta ruta'}\" tiene registros asociados "
+                               "(por ejemplo, viajes) y no puede eliminarse.",
+                            size=13,
+                            color="#475569",
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.ElevatedButton(
+                            "Entendido",
+                            bgcolor="#6366F1",
+                            color="white",
+                            width=200,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20)),
+                            on_click=lambda e: cerrar_dialogo(dialogo_aviso),
+                        ),
+                    ],
+                ),
+            ),
+        )
+        abrir_dialogo(dialogo_aviso)
+
     # --- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN ---
     def confirmar_eliminar(id_r, nombre_r=""):
         if id_r is None:
@@ -551,10 +595,11 @@ def vista_rutas(page: ft.Page, ir_a):
                 mostrar_exito("Ruta eliminada con éxito")
             except ValueError as ve:
                 # Error de negocio esperado (ej. FK violation por viajes asociados).
-                # dao.eliminar() ya nos da un mensaje amigable, lo mostramos tal cual.
+                # En vez del snackbar simple, mostramos el mismo aviso "no se puede
+                # eliminar" que usa la vista de choferes.
                 print(f"[vista_rutas] No se pudo eliminar: {ve}")
                 cerrar_dialogo(dialogo_eliminar)
-                mostrar_error(str(ve))
+                mostrar_aviso_no_se_puede_eliminar(nombre_r, str(ve))
             except Exception:
                 print("[vista_rutas] EXCEPCIÓN al eliminar:")
                 traceback.print_exc()
