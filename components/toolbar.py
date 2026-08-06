@@ -82,6 +82,27 @@ def abrir_dialogo(e, page):
         width=300,
     )
 
+    hora_llegada = ft.TextField(
+    label="Hora de llegada",
+    hint_text="00:00",
+    width=300,
+)
+
+    pasajeros = ft.TextField(
+        label="Pasajeros",
+        hint_text="Ejemplo: 25",
+        width=300,
+        keyboard_type=ft.KeyboardType.NUMBER,
+    )
+
+    observaciones = ft.TextField(
+        label="Observaciones",
+        width=300,
+        multiline=True,
+        min_lines=2,
+        max_lines=3,
+    )
+
     estatus = ft.Dropdown(
         label="Estatus",
         width=300,
@@ -104,6 +125,9 @@ def abrir_dialogo(e, page):
                 ruta,
                 fecha,
                 hora,
+                hora_llegada,
+                pasajeros,
+                observaciones,
                 estatus, 
             ]
         ),

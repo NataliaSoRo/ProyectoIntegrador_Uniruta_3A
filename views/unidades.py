@@ -1,5 +1,6 @@
 import flet as ft
 from dao.unidad_dao import UnidadDAO
+from models.unidad import Unidad
 
 
 def vista_unidades(page: ft.Page, ir_a):
@@ -7,7 +8,7 @@ def vista_unidades(page: ft.Page, ir_a):
 
     dao = UnidadDAO()
 
-    # Usuario actual de la sesión (fallback a "Natalia Sosa Rodriguez" si no hay datos)
+    # Usuario actual de la sesión
     usuario = getattr(page, "usuario_actual", None)
     nombre_usuario = (
         getattr(usuario, "nombre", "Natalia Sosa Rodriguez")
@@ -32,6 +33,10 @@ def vista_unidades(page: ft.Page, ir_a):
         ir_a("login")
 
     def abrir_notificaciones(e):
+        def cerrar_dialogo(e):
+            dialogo.open = False
+            page.update()
+
         dialogo = ft.AlertDialog(
             title=ft.Text("Notificaciones", weight=ft.FontWeight.BOLD),
             content=ft.Column(
@@ -48,13 +53,18 @@ def vista_unidades(page: ft.Page, ir_a):
                     ),
                 ],
             ),
-            actions=[
-                ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo))
-            ],
+            actions=[ft.TextButton("Cerrar", on_click=cerrar_dialogo)],
         )
-        page.open(dialogo)
+        if dialogo not in page.overlay:
+            page.overlay.append(dialogo)
+        dialogo.open = True
+        page.update()
 
     def abrir_perfil(e):
+        def cerrar_perfil(e):
+            dialogo_perfil.open = False
+            page.update()
+
         dialogo_perfil = ft.AlertDialog(
             title=ft.Row(
                 spacing=10,
@@ -116,15 +126,14 @@ def vista_unidades(page: ft.Page, ir_a):
                     ],
                 ),
             ),
-            actions=[
-                ft.TextButton(
-                    "Cerrar", on_click=lambda e: page.close(dialogo_perfil)
-                )
-            ],
+            actions=[ft.TextButton("Cerrar", on_click=cerrar_perfil)],
         )
-        page.open(dialogo_perfil)
+        if dialogo_perfil not in page.overlay:
+            page.overlay.append(dialogo_perfil)
+        dialogo_perfil.open = True
+        page.update()
 
-    # --- 1. BARRA SUPERIOR (HEADER UNIFICADO) ---
+    # --- 1. BARRA SUPERIOR (HEADER) ---
     logo_header = ft.Container(
         padding=ft.Padding(15, 8, 15, 8),
         on_click=lambda e: ir_a("menu_principal"),
@@ -172,14 +181,14 @@ def vista_unidades(page: ft.Page, ir_a):
                     ft.PopupMenuItem(
                         icon=ft.Icons.PERSON_OUTLINE,
                         content=ft.Text("Mi Perfil", size=13),
-                        on_click=abrir_perfil,
+                        on_click=lambda e: ir_a("perfil"),
                     ),
                     ft.PopupMenuItem(
                         icon=ft.Icons.SETTINGS_OUTLINED,
                         content=ft.Text("Configuración", size=13),
                         on_click=lambda e: ir_a("configuracion"),
                     ),
-                    ft.PopupMenuItem(),  # Separador visual
+                    ft.PopupMenuItem(),
                     ft.PopupMenuItem(
                         icon=ft.Icons.LOGOUT,
                         content=ft.Text("Cerrar sesión", size=13),
@@ -240,9 +249,7 @@ def vista_unidades(page: ft.Page, ir_a):
                     ),
                 ),
                 item_sidebar(
-                    "Menú principal",
-                    ft.Icons.HOME_OUTLINED,
-                    "menu_principal",
+                    "Menú principal", ft.Icons.HOME_OUTLINED, "menu_principal"
                 ),
                 item_sidebar("Choferes", ft.Icons.BADGE_OUTLINED, "choferes"),
                 item_sidebar(
@@ -267,7 +274,6 @@ def vista_unidades(page: ft.Page, ir_a):
                 return getattr(u, llave)
         return por_defecto
 
-    # ListView para carrusel horizontal con scroll
     carrusel_listview = ft.ListView(
         expand=True,
         horizontal=True,
@@ -280,31 +286,59 @@ def vista_unidades(page: ft.Page, ir_a):
             cargar_unidades()
             page.update()
 
-    def crear_tarjeta_unidad(u, indice=0):
-        id_u = obtener_val(u, ["ID", "id", "id_unidad"], None)
+    def confirmar_eliminacion(id_unidad):
+        def cancelar(e):
+            dialogo.open = False
+            page.update()
 
-        # Extracción del Número Económico
+        def confirmar(e):
+            eliminar_unidad(id_unidad)
+            dialogo.open = False
+            cargar_unidades()
+            page.update()
+
+        dialogo = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Eliminar unidad"),
+            content=ft.Text("¿Estás seguro de eliminar esta unidad?"),
+            actions=[
+                ft.TextButton("Cancelar", on_click=cancelar),
+                ft.ElevatedButton(
+                    "Eliminar", 
+                    bgcolor="RED",
+                    color="white",
+                    on_click=confirmar,
+                ),
+            ],
+        )
+
+        if dialogo not in page.overlay:
+            page.overlay.append(dialogo)
+
+        dialogo.open = True
+        page.update()
+
+    def crear_tarjeta_unidad(u, indice=0):
+        id_u = obtener_val(u, ["id", "ID", "id_unidad"], None)
+
         no_economico = obtener_val(
             u,
             [
+                "noeconomico",
                 "No. Economico",
                 "No_economico",
                 "numero_economico",
                 "num_economico",
-                "no_economico",
-                "N_O_economico",
-                "codigo",
             ],
             f"ECO-{900 + indice}",
         )
 
         val_modelo = obtener_val(
-            u, ["Modelo", "modelo", "nombre_modelo"], "Sin especificar"
+            u, ["modelo", "Modelo", "nombre_modelo"], "Sin especificar"
         )
-        placas = obtener_val(u, ["Placas", "placas"], "S/N")
-        estatus = obtener_val(u, ["Estatus", "estatus", "estado"], "Inactivo")
+        placas = obtener_val(u, ["placas", "Placas"], "S/N")
+        estatus = obtener_val(u, ["estatus", "Estatus", "estado"], "Inactivo")
 
-        # Variación de imágenes combi_1.png, combi_2.png, combi_3.png
         img_db = obtener_val(u, ["imagen", "foto", "Imagen"], None)
         if img_db:
             str_img = str(img_db).strip()
@@ -381,7 +415,7 @@ def vista_unidades(page: ft.Page, ir_a):
                                 bgcolor="#1E1B4B",
                                 border_radius=16,
                                 alignment=ft.Alignment(0, 0),
-                                on_click=lambda e, uid=id_u: eliminar_unidad(
+                                on_click=lambda e, uid=id_u: confirmar_eliminacion(
                                     uid
                                 ),
                                 content=ft.Icon(
@@ -404,141 +438,34 @@ def vista_unidades(page: ft.Page, ir_a):
             elif hasattr(dao, "buscar"):
                 lista = dao.buscar(filtro)
         else:
-            if hasattr(dao, "obtener_todas"):
-                lista = dao.obtener_todas()
-            elif hasattr(dao, "obtener_todos"):
+            if hasattr(dao, "obtener_todos"):
                 lista = dao.obtener_todos()
 
-        # Si no hay registros aún de la BD, usamos esta lista extendida de 16 unidades para probar el scroll
         if not lista:
             lista = [
                 {
-                    "ID": 1,
-                    "No. Economico": "ECO-947",
-                    "Modelo": "Sprinter",
-                    "Placas": "DHG-234",
-                    "Estatus": "Mantenimiento",
+                    "id": 1,
+                    "noeconomico": "ECO-947",
+                    "modelo": "Sprinter",
+                    "placas": "DHG-234",
+                    "estatus": "Mantenimiento",
                     "imagen": "combi_1.png",
                 },
                 {
-                    "ID": 2,
-                    "No. Economico": "ECO-102",
-                    "Modelo": "Urvan",
-                    "Placas": "ABC-123",
-                    "Estatus": "Activo",
+                    "id": 2,
+                    "noeconomico": "ECO-102",
+                    "modelo": "Urvan",
+                    "placas": "ABC-123",
+                    "estatus": "Activo",
                     "imagen": "combi_2.png",
                 },
                 {
-                    "ID": 3,
-                    "No. Economico": "ECO-103",
-                    "Modelo": "Hiace",
-                    "Placas": "XYZ-567",
-                    "Estatus": "Activo",
+                    "id": 3,
+                    "noeconomico": "ECO-103",
+                    "modelo": "Hiace",
+                    "placas": "XYZ-567",
+                    "estatus": "Activo",
                     "imagen": "combi_3.png",
-                },
-                {
-                    "ID": 4,
-                    "No. Economico": "ECO-104",
-                    "Modelo": "Crafter",
-                    "Placas": "DEF-345",
-                    "Estatus": "Activo",
-                    "imagen": "combi_1.png",
-                },
-                {
-                    "ID": 5,
-                    "No. Economico": "ECO-105",
-                    "Modelo": "Transit",
-                    "Placas": "GHI-890",
-                    "Estatus": "Inactivo",
-                    "imagen": "combi_2.png",
-                },
-                {
-                    "ID": 6,
-                    "No. Economico": "ECO-106",
-                    "Modelo": "NV350",
-                    "Placas": "JKL-112",
-                    "Estatus": "Activo",
-                    "imagen": "combi_3.png",
-                },
-                {
-                    "ID": 7,
-                    "No. Economico": "ECO-107",
-                    "Modelo": "Urvan NV",
-                    "Placas": "MNO-334",
-                    "Estatus": "Mantenimiento",
-                    "imagen": "combi_1.png",
-                },
-                {
-                    "ID": 8,
-                    "No. Economico": "ECO-108",
-                    "Modelo": "Hiace GL",
-                    "Placas": "PQR-556",
-                    "Estatus": "Activo",
-                    "imagen": "combi_2.png",
-                },
-                {
-                    "ID": 9,
-                    "No. Economico": "ECO-109",
-                    "Modelo": "Master",
-                    "Placas": "STU-778",
-                    "Estatus": "Activo",
-                    "imagen": "combi_3.png",
-                },
-                {
-                    "ID": 10,
-                    "No. Economico": "ECO-110",
-                    "Modelo": "Ducato",
-                    "Placas": "VWX-990",
-                    "Estatus": "Inactivo",
-                    "imagen": "combi_1.png",
-                },
-                {
-                    "ID": 11,
-                    "No. Economico": "ECO-111",
-                    "Modelo": "Express Van",
-                    "Placas": "YZA-123",
-                    "Estatus": "Activo",
-                    "imagen": "combi_2.png",
-                },
-                {
-                    "ID": 12,
-                    "No. Economico": "ECO-112",
-                    "Modelo": "Boxer",
-                    "Placas": "BCD-456",
-                    "Estatus": "Mantenimiento",
-                    "imagen": "combi_3.png",
-                },
-                {
-                    "ID": 13,
-                    "No. Economico": "ECO-113",
-                    "Modelo": "Sprinter 515",
-                    "Placas": "EFG-789",
-                    "Estatus": "Activo",
-                    "imagen": "combi_1.png",
-                },
-                {
-                    "ID": 14,
-                    "No. Economico": "ECO-114",
-                    "Modelo": "Urvan 2024",
-                    "Placas": "HIJ-012",
-                    "Estatus": "Activo",
-                    "imagen": "combi_2.png",
-                },
-                {
-                    "ID": 15,
-                    "No. Economico": "ECO-115",
-                    "Modelo": "Hiace Commuter",
-                    "Placas": "KLM-345",
-                    "Estatus": "Activo",
-                    "imagen": "combi_3.png",
-                },
-                {
-                    "ID": 16,
-                    "No. Economico": "ECO-116",
-                    "Modelo": "Crafter Maxi",
-                    "Placas": "NOP-678",
-                    "Estatus": "Inactivo",
-                    "imagen": "combi_1.png",
                 },
             ]
 
@@ -548,6 +475,117 @@ def vista_unidades(page: ft.Page, ir_a):
 
     def al_cambiar_buscador(e):
         cargar_unidades(e.control.value)
+        page.update()
+
+    # --- FORMULARIO Y MODAL AGREGAR UNIDAD ---
+    txt_economico = ft.TextField(
+        label="No. Económico", hint_text="Ej. ECO-001", height=48, text_size=12
+    )
+    txt_placas = ft.TextField(
+        label="Placas", hint_text="Ej. ABC-123", height=48, text_size=12
+    )
+    txt_modelo = ft.TextField(
+        label="Modelo", hint_text="Ej. Sprinter", height=48, text_size=12
+    )
+    txt_marca = ft.TextField(
+        label="Marca", hint_text="Ej. Mercedes", height=48, text_size=12
+    )
+    txt_anio = ft.TextField(
+        label="Año", hint_text="Ej. 2022", height=48, text_size=12
+    )
+    txt_kilometraje = ft.TextField(
+        label="Kilometraje", hint_text="Ej. 50000", height=48, text_size=12
+    )
+    lbl_error = ft.Text("", color="red", size=11)
+
+    def limpiar_formulario():
+        txt_economico.value = ""
+        txt_placas.value = ""
+        txt_modelo.value = ""
+        txt_marca.value = ""
+        txt_anio.value = ""
+        txt_kilometraje.value = ""
+        lbl_error.value = ""
+
+    def cerrar_modal_agregar(e):
+        modal_agregar.open = False
+        page.update()
+
+    def guardar_unidad(e):
+        try:
+            anio_val = int(txt_anio.value) if txt_anio.value.isdigit() else 0
+            km_val = (
+                int(txt_kilometraje.value)
+                if txt_kilometraje.value.isdigit()
+                else 0
+            )
+
+            unidad = Unidad(
+                noeconomico=txt_economico.value,
+                placas=txt_placas.value,
+                modelo=txt_modelo.value,
+                marca=txt_marca.value,
+                año=anio_val,
+                kilometraje=km_val,
+                estatus="Activo",
+            )
+
+            dao.insertar(unidad)
+
+            modal_agregar.open = False
+            limpiar_formulario()
+            cargar_unidades()
+            page.update()
+
+        except Exception as ex:
+            lbl_error.value = f"Error al guardar: {str(ex)}"
+            page.update()
+
+    modal_agregar = ft.AlertDialog(
+        content=ft.Container(
+            width=400,
+            content=ft.Column(
+                tight=True,
+                spacing=12,
+                controls=[
+                    ft.Text(
+                        "Ingresar unidad", size=20, weight=ft.FontWeight.BOLD
+                    ),
+                    txt_economico,
+                    txt_placas,
+                    txt_modelo,
+                    txt_marca,
+                    txt_anio,
+                    txt_kilometraje,
+                    lbl_error,
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.END,
+                        controls=[
+                            ft.ElevatedButton(
+                                "Cancelar",
+                                bgcolor="#F97316",
+                                color="white",
+                                on_click=cerrar_modal_agregar,
+                            ),
+                            ft.ElevatedButton(
+                                "Aceptar",
+                                bgcolor="#6366F1",
+                                color="white",
+                                on_click=guardar_unidad,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        )
+    )
+
+    def abrir_modal_agregar(e):
+        limpiar_formulario()
+        # Se añade directamente a la capa superpuesta (overlay) de Flet
+        if modal_agregar not in page.overlay:
+            page.overlay.append(modal_agregar)
+        modal_agregar.open = True
         page.update()
 
     # --- 4. BUSCADOR Y BOTÓN INGRESAR ---
@@ -582,7 +620,7 @@ def vista_unidades(page: ft.Page, ir_a):
             shape=ft.RoundedRectangleBorder(radius=18),
             padding=ft.Padding(16, 6, 16, 6),
         ),
-        on_click=lambda e: print("Abrir modal unidad"),
+        on_click=abrir_modal_agregar,
     )
 
     barra_controles = ft.Row(
@@ -596,13 +634,21 @@ def vista_unidades(page: ft.Page, ir_a):
 
     cargar_unidades()
 
-    # --- 5. LÓGICA DE NAVEGACIÓN Y SCROLL MEDIANTE FLECHAS ---
+    # --- 5. LÓGICA DE NAVEGACIÓN Y SCROLL ---
     def deslizar_derecha(e):
-        carrusel_listview.scroll_to(delta=720, duration=350)
+        carrusel_listview.scroll_to(
+            offset=1000,
+            duration=350,
+        )
+        page.update()
 
     def deslizar_izquierda(e):
-        carrusel_listview.scroll_to(delta=-720, duration=350)
-
+        carrusel_listview.scroll_to(
+            offset=0,
+            duration=350,
+        )
+        page.update()
+        
     btn_prev = ft.Container(
         width=36,
         height=36,

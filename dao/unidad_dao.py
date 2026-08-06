@@ -93,3 +93,5 @@ class UnidadDAO:
         conexion.commit()
         cursor.close()
         conexion.close()
+
+        return True 

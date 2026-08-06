@@ -18,6 +18,9 @@ class ViajeDAO:
                 v.id_unidad, 
                 v.id_chofer,
                 v.id_ruta,
+                v.pasajeros,
+                v.hora_llegada,
+                v.observaciones,
                 c.nombre AS chofer_nombre, 
                 r.nombre AS ruta_nombre
             FROM viaje v
@@ -42,8 +45,11 @@ class ViajeDAO:
                 id_unidad=registro[6],
                 id_chofer=registro[7],
                 id_ruta=registro[8],
-                chofer_nombre=registro[9],
-                ruta_nombre=registro[10],
+                pasajeros=registro[9],
+                hora_llegada=registro[10],
+                observaciones=registro[11],
+                chofer_nombre=registro[12],
+                ruta_nombre=registro[13],
             )
             viajes.append(viaje)
 
@@ -54,11 +60,27 @@ class ViajeDAO:
     def insertar(self, viaje):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
+
+        print("DAO origen:", viaje.origen)
+        print("DAO destino:", viaje.destino)
+
         cursor.execute("""
-        INSERT INTO viaje (origen, destino, fecha, hora, estatus, id_unidad, id_chofer, id_ruta)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+        INSERT INTO viaje (
+            origen,
+            destino,
+            fecha,
+            hora,
+            estatus,
+            id_unidad,
+            id_chofer,
+            id_ruta,
+            pasajeros,
+            hora_llegada,
+            observaciones
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """,
-           (
+        (
             viaje.origen,
             viaje.destino,
             viaje.fecha,
@@ -66,7 +88,10 @@ class ViajeDAO:
             viaje.estatus,
             viaje.id_unidad,
             viaje.id_chofer,
-            viaje.id_ruta
+            viaje.id_ruta,
+            viaje.pasajeros,
+            viaje.hora_llegada,
+            viaje.observaciones
         ))
 
         conexion.commit()
@@ -79,14 +104,26 @@ class ViajeDAO:
 
         cursor.execute("""
         UPDATE viaje
-        SET origen = %s, destino = %s, fecha = %s, hora = %s, id_unidad = %s, estatus = %s
+        SET
+            fecha = %s,
+            hora = %s,
+            hora_llegada = %s,
+            pasajeros = %s,
+            observaciones = %s,
+            id_unidad = %s,
+            id_chofer = %s,
+            id_ruta = %s,
+            estatus = %s
         WHERE id = %s
         """, (
-            viaje.origen,
-            viaje.destino,
             viaje.fecha,
             viaje.hora,
+            viaje.hora_llegada,
+            viaje.pasajeros,
+            viaje.observaciones,
             viaje.id_unidad,
+            viaje.id_chofer,
+            viaje.id_ruta,
             viaje.estatus,
             viaje.id
             ))

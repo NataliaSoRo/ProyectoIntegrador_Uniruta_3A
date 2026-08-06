@@ -1,3 +1,4 @@
+
 import sys
 from pathlib import Path
 import flet as ft
@@ -22,13 +23,11 @@ def main(page: ft.Page):
     page.window.resizable = True
     page.padding = 0
 
-    # Guardar la ruta actual en page
     page.ruta_actual = "login"
 
     def ir_a(ruta):
         ruta_previa = page.ruta_actual
 
-        # Si no vamos a perfil, actualizamos la última vista activa
         if ruta != "perfil":
             page.ruta_actual = ruta
 
@@ -44,20 +43,20 @@ def main(page: ft.Page):
             page.add(vista_viajes(page, ir_a))
         elif ruta == "choferes":
             page.add(vista_choferes(page, ir_a))
-        elif ruta == "unidades":
+        elif ruta == "unidades": 
             page.add(vista_unidades(page, ir_a))
         elif ruta == "rutas":
             page.add(vista_rutas(page, ir_a))
         elif ruta == "pagos":
             page.add(vista_pagos(page, ir_a))
         elif ruta == "perfil":
-            # Le enviamos la 'ruta_previa' para saber a dónde regresar
             page.add(vista_perfil(page, ir_a, ruta_previa=ruta_previa))
 
         page.update()
 
+    # Si quieres probar directo la pantalla de unidades al iniciar, usa ir_a("unidades")
     ir_a("login")
 
 
 if __name__ == "__main__":
-    ft.run(main, assets_dir="assets")
+    ft.app(target=main, assets_dir="assets")

@@ -1,5 +1,9 @@
 import flet as ft
 from dao.viaje_dao import ViajeDAO
+from models.viaje import Viaje
+from dao.unidad_dao import UnidadDAO
+from dao.chofer_dao import ChoferDAO
+from dao.ruta_dao import RutaDAO
 
 
 def vista_viajes(page: ft.Page, ir_a):
@@ -7,6 +11,9 @@ def vista_viajes(page: ft.Page, ir_a):
 
     # Instancia del DAO
     dao = ViajeDAO() if "ViajeDAO" in globals() else None
+    unidad_dao = UnidadDAO()
+    chofer_dao = ChoferDAO()
+    ruta_dao = RutaDAO()
 
     # Usuario actual de la sesión (fallback a "Natalia Sosa Rodriguez" si no hay datos)
     usuario = getattr(page, "usuario_actual", None)
@@ -53,7 +60,11 @@ def vista_viajes(page: ft.Page, ir_a):
                 ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo))
             ],
         )
-        page.open(dialogo)
+        # ✅ FORMA CORRECTA DE ABRIR DIÁLOGOS EN TU VERSIÓN DE FLET
+        if dialogo not in page.overlay:
+            page.overlay.append(dialogo)
+        dialogo.open = True
+        page.update()
 
     def abrir_perfil(e):
         dialogo_perfil = ft.AlertDialog(
@@ -123,7 +134,11 @@ def vista_viajes(page: ft.Page, ir_a):
                 )
             ],
         )
-        page.open(dialogo_perfil)
+        # ✅ FORMA CORRECTA DE ABRIR DIÁLOGOS EN TU VERSIÓN DE FLET
+        if dialogo_perfil not in page.overlay:
+            page.overlay.append(dialogo_perfil)
+        dialogo_perfil.open = True
+        page.update()
 
     # --- 1. BARRA SUPERIOR (HEADER UNIFICADO) ---
     logo_header = ft.Container(
@@ -173,7 +188,7 @@ def vista_viajes(page: ft.Page, ir_a):
                     ft.PopupMenuItem(
                         icon=ft.Icons.PERSON_OUTLINE,
                         content=ft.Text("Mi Perfil", size=13),
-                        on_click=abrir_perfil,
+                        on_click=abrir_perfil,  # ✅ Llama a la función que abre el cuadro flotante
                     ),
                     ft.PopupMenuItem(
                         icon=ft.Icons.SETTINGS_OUTLINED,
@@ -328,6 +343,256 @@ def vista_viajes(page: ft.Page, ir_a):
         rows=[],
     )
 
+    #=============================
+    # VARIABLE PARA SABER SI ESTAMOS EDITANDO
+    #=============================
+    id_viaje_edicion = None
+
+    txt_titulo_modal = ft.Text(
+        "Programar viaje",
+        size=22,
+        weight=ft.FontWeight.BOLD,
+        color="#0F172A",
+    )
+
+    txt_fecha_inner = ft.TextField(
+        hint_text="AAAA-MM-DD",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        expand=True,
+    )
+
+    txt_fecha = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=txt_fecha_inner,
+    )
+
+    txt_hora_inner = ft.TextField(
+        hint_text="HH:MM",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        expand=True,
+    )
+
+    txt_hora = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=txt_hora_inner,
+    )
+
+    txt_hora_llegada_inner = ft.TextField(
+        hint_text="HH:MM",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        expand=True,
+    )
+
+    txt_hora_llegada = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=txt_hora_llegada_inner,
+    )
+
+    txt_pasajeros_inner = ft.TextField(
+        hint_text="Ej. 25",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        keyboard_type=ft.KeyboardType.NUMBER,
+        expand=True,
+    )
+
+    txt_pasajeros = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=txt_pasajeros_inner,
+    )
+
+    txt_observaciones_inner = ft.TextField(
+        hint_text="Escribe alguna observación...",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 8, 10, 8),
+        text_size=12,
+        multiline=True,
+        min_lines=2,
+        max_lines=3,
+        expand=True,
+    )
+
+    txt_observaciones = ft.Container(
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        content=txt_observaciones_inner,
+    )
+
+    dd_estatus_inner = ft.Dropdown(
+        hint_text="Seleccionar estatus",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        value="Programado",
+        options=[
+            ft.dropdown.Option("Programado"),
+            ft.dropdown.Option("En curso"),
+            ft.dropdown.Option("Concluido"),
+            ft.dropdown.Option("Cancelado"),
+        ],
+        expand=True,
+    )
+
+    dd_estatus = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=dd_estatus_inner,
+    )
+
+    dd_unidad_inner = ft.Dropdown(
+        hint_text="Seleccionar unidad",
+        border=ft.InputBorder.NONE,
+        content_padding=ft.Padding(10, 0, 10, 0),
+        text_size=12,
+        options=[],
+        expand=True,
+    )
+
+    dd_chofer_inner = ft.Dropdown(
+        hint_text="Seleccionar chofer",
+        options=[],
+        expand=True,
+    )
+
+    dd_chofer = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        content=dd_chofer_inner,
+    )
+
+    dd_ruta_inner = ft.Dropdown(
+        hint_text="Seleccionar ruta",
+        options=[],
+        expand=True,
+    )
+
+    dd_ruta = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        content=dd_ruta_inner,
+    )
+
+    def cargar_dropdowns():
+
+        # UNIDADES
+        dd_unidad_inner.options = [
+            ft.dropdown.Option(
+                key=str(u.id),
+                text=u.noeconomico
+            )
+            for u in unidad_dao.obtener_todos()
+        ]
+
+        # CHOFERES
+        dd_chofer_inner.options = [
+            ft.dropdown.Option(
+                key=str(c.id),
+                text=c.nombre
+            )
+            for c in chofer_dao.obtener_todos()
+        ]
+
+        # RUTAS
+        dd_ruta_inner.options = [
+            ft.dropdown.Option(
+                key=str(r.id),
+                text=r.nombre
+            )
+            for r in ruta_dao.obtener_todos()
+        ]
+
+    dd_unidad = ft.Container(
+        height=40,
+        bgcolor="#F8FAFC",
+        border=ft.Border.all(1, "#CBD5E1"),
+        border_radius=8,
+        alignment=ft.Alignment(-1, 0),
+        content=dd_unidad_inner,
+    )
+    
+    def guardar_viaje(e):
+
+        ruta_dao = RutaDAO()
+
+        rutas = ruta_dao.obtener_todos()
+
+        origen = ""
+        destino = ""
+
+        for ruta in rutas:
+            if str(ruta.id) == str(dd_ruta_inner.value):
+                origen = ruta.origen
+                destino = ruta.destino
+                break
+
+        viaje = Viaje(
+            fecha=txt_fecha_inner.value,
+            hora=txt_hora_inner.value,
+            hora_llegada=txt_hora_llegada_inner.value,
+            pasajeros=txt_pasajeros_inner.value,
+            observaciones=txt_observaciones_inner.value,
+            id_unidad=dd_unidad_inner.value,
+            id_chofer=dd_chofer_inner.value,
+            id_ruta=dd_ruta_inner.value,
+            estatus=dd_estatus_inner.value,
+        )
+
+        viaje.origen = origen
+        viaje.destino = destino
+
+        print("Ruta seleccionada:", dd_ruta_inner.value)
+        print("Origen:", origen)
+        print("Destino:", destino)
+
+        dao.insertar(viaje)
+
+        modal_programar.open = False
+        cargar_datos_tabla()
+        page.update()
+    
+    def abrir_modal_programar(e):
+
+        cargar_dropdowns()
+
+        txt_titulo_modal.value = "Programar viaje"
+
+        if modal_programar not in page.overlay:
+            page.overlay.append(modal_programar)
+
+        modal_programar.open = True
+        page.update()
+
     def eliminar_viaje(id_v):
         if dao and hasattr(dao, "eliminar"):
             dao.eliminar(id_v)
@@ -467,9 +732,7 @@ def vista_viajes(page: ft.Page, ir_a):
                                         border=ft.Border.all(1.5, "#EC932F"),
                                         border_radius=12,
                                         alignment=ft.Alignment(0, 0),
-                                        on_click=lambda e, uid=id_v: print(
-                                            f"Editar {uid}"
-                                        ),
+                                        on_click=lambda e, viaje=v: editar_viaje(viaje),
                                         content=ft.Icon(
                                             ft.Icons.EDIT_OUTLINED,
                                             size=13,
@@ -517,6 +780,72 @@ def vista_viajes(page: ft.Page, ir_a):
         on_change=al_cambiar_buscador,
     )
 
+    modal_programar = ft.AlertDialog(
+        content=ft.Container(
+            width=550,
+            padding=20,
+            bgcolor="white",
+            border_radius=12,
+            content=ft.Column(
+                tight=True,
+                scroll=ft.ScrollMode.AUTO,
+                controls=[
+                    txt_titulo_modal,
+
+                    ft.Text("Fecha"),
+                    txt_fecha,
+
+                    ft.Text("Hora de salida"),
+                    txt_hora,
+
+                    ft.Text("Hora de llegada"),
+                    txt_hora_llegada,
+
+                    ft.Text("Pasajeros"),
+                    txt_pasajeros,
+
+                    ft.Text("Unidad"),
+                    dd_unidad,
+
+                    ft.Text("Chofer"),
+                    dd_chofer,
+
+                    ft.Text("Ruta"),
+                    dd_ruta,
+
+                    ft.Text("Estatus"),
+                    dd_estatus,
+
+                    ft.Text("Observaciones"),
+                    txt_observaciones,
+
+                    ft.Row(
+                        controls=[
+                            ft.ElevatedButton(
+                                "Guardar",
+                                bgcolor="#6366F1",
+                                color="white",
+                                expand=True,
+                                on_click=guardar_viaje
+                            ),
+
+                            ft.ElevatedButton(
+                                "Cancelar",
+                                bgcolor="#F97316",
+                                color="white",
+                                expand=True,
+                                on_click=lambda e: (
+                                    setattr(modal_programar, "open", False),
+                                    page.update(),
+                                ),
+                            ),
+                        ]
+                    ),
+                ],
+            ),
+        )
+    )
+
     btn_programar = ft.ElevatedButton(
         content=ft.Row(
             [
@@ -535,8 +864,33 @@ def vista_viajes(page: ft.Page, ir_a):
             shape=ft.RoundedRectangleBorder(radius=18),
             padding=ft.Padding(16, 6, 16, 6),
         ),
-        on_click=lambda e: print("Abrir modal programar viaje"),
+        on_click=abrir_modal_programar 
     )
+
+    def editar_viaje(viaje):
+    
+        global id_viaje_edicion
+
+        id_viaje_edicion = viaje.id
+
+        txt_titulo_modal.value = "Editar viaje"
+
+        txt_fecha_inner.value = str(viaje.fecha)
+        txt_hora_inner.value = str(viaje.hora)
+        txt_hora_llegada_inner.value = str(viaje.hora_llegada)
+        txt_pasajeros_inner.value = str(viaje.pasajeros)
+        txt_observaciones_inner.value = str(viaje.observaciones)
+
+        dd_unidad_inner.value = str(viaje.id_unidad)
+        dd_chofer_inner.value = str(viaje.id_chofer)
+        dd_ruta_inner.value = str(viaje.id_ruta)
+        dd_estatus_inner.value = str(viaje.estatus)
+
+        if modal_programar not in page.overlay:
+            page.overlay.append(modal_programar)
+
+        modal_programar.open = True
+        page.update()
 
     barra_controles = ft.Row(
         alignment=ft.MainAxisAlignment.CENTER,
