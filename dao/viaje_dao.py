@@ -1,3 +1,4 @@
+import psycopg2
 from database.conexion import Conexion
 from models.viaje import Viaje
 
@@ -57,6 +58,7 @@ class ViajeDAO:
         conexion.close()
 
         return viajes
+
     def insertar(self, viaje):
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
@@ -136,11 +138,24 @@ class ViajeDAO:
         conexion = Conexion.obtener_conexion()
         cursor = conexion.cursor()
 
-        cursor.execute(
-        "DELETE FROM viaje WHERE id = %s", 
-        (id,)
-    )
-
-        conexion.commit()
-        cursor.close()
-        conexion.close()
+        try:
+            cursor.execute(
+                "DELETE FROM viaje WHERE id = %s",
+                (id,)
+            )
+            conexion.commit()
+        except psycopg2.errors.ForeignKeyViolation:
+            # Deshacemos la transacción fallida para no dejar la conexión
+            # en estado "abortado" (imprescindible en psycopg2/Postgres).
+            conexion.rollback()
+            raise ValueError(
+                "No se puede eliminar este viaje porque tiene pagos "
+                "registrados asociados. Elimina o reasigna esos pagos "
+                "primero."
+            )
+        except Exception:
+            conexion.rollback()
+            raise
+        finally:
+            cursor.close()
+            conexion.close()

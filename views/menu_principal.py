@@ -10,6 +10,7 @@ def vista_menu_principal(page: ft.Page, ir_a):
     dao = KpiDAO()
     resumen = dao.obtener_resumen_kpis()
     prioridades = dao.obtener_prioridades()
+    ganancias_por_ruta = dao.obtener_ganancias_por_ruta()
 
     # Usuario actual de la sesión (fallback a "Juana Suarez" si no hay datos)
     usuario = getattr(page, "usuario_actual", None)
@@ -243,41 +244,83 @@ def vista_menu_principal(page: ft.Page, ir_a):
         f"Completados: {resumen['viajes_completados']}",
     )
 
-    # --- 4. GRÁFICA DE BARRAS ---
-    def crear_par_barras(h_azul, h_verde):
-        return ft.Row(
-            alignment=ft.MainAxisAlignment.CENTER,
-            vertical_alignment=ft.CrossAxisAlignment.END,
-            spacing=5,
+    ganancia_total_valor = resumen.get("ganancias_totales", 0.0) or 0.0
+    kpi_ganancias = tarjeta_kpi(
+        "Ganancias totales",
+        f"${ganancia_total_valor:,.0f}",
+        "Pasajeros x tarifa",
+    )
+
+    # --- 4. GRÁFICA DE GANANCIA POR RUTA (pasajeros x tarifa, real) ---
+    ALTURA_MAX_BARRA = 95
+    COLORES_BARRAS = ["#10B981", "#3B92F6", "#EC932F", "#6366F1", "#0284C7", "#F97316"]
+
+    def construir_barra_ganancia(nombre_ruta, ganancia, color, max_valor):
+        if max_valor > 0:
+            altura_px = max(6, int((ganancia / max_valor) * ALTURA_MAX_BARRA))
+        else:
+            altura_px = 6
+
+        return ft.Column(
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=4,
             controls=[
+                ft.Text(f"${ganancia:,.0f}", size=9, color="#334155"),
                 ft.Container(
-                    width=15,
-                    height=h_azul,
-                    bgcolor="#3B92F6",
-                    border_radius=ft.BorderRadius(3, 3, 0, 0),
+                    width=22,
+                    height=altura_px,
+                    bgcolor=color,
+                    border_radius=ft.BorderRadius(4, 4, 0, 0),
+                    tooltip=f"{nombre_ruta}: ${ganancia:,.2f}",
+                    animate=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
                 ),
                 ft.Container(
-                    width=15,
-                    height=h_verde,
-                    bgcolor="#10B981",
-                    border_radius=ft.BorderRadius(3, 3, 0, 0),
+                    width=52,
+                    content=ft.Text(
+                        str(nombre_ruta),
+                        size=9,
+                        color="#64748B",
+                        text_align=ft.TextAlign.CENTER,
+                        max_lines=2,
+                        overflow=ft.TextOverflow.ELLIPSIS,
+                    ),
                 ),
             ],
         )
 
-    grafica_barras = ft.Container(
-        height=135,
-        alignment=ft.Alignment(0, 1),
-        content=ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_EVENLY,
-            vertical_alignment=ft.CrossAxisAlignment.END,
-            controls=[
-                crear_par_barras(60, 90),
-                crear_par_barras(50, 100),
-                crear_par_barras(75, 120),
-            ],
-        ),
-    )
+    barras_ganancia_ruta = []
+    if ganancias_por_ruta:
+        valores = [float(g or 0) for (_nombre, g) in ganancias_por_ruta]
+        max_valor = max(valores) if valores else 0
+        # Mostramos hasta 5 rutas para que no se desborde la tarjeta
+        for i, (nombre_ruta, ganancia) in enumerate(ganancias_por_ruta[:5]):
+            color = COLORES_BARRAS[i % len(COLORES_BARRAS)]
+            barras_ganancia_ruta.append(
+                construir_barra_ganancia(nombre_ruta, float(ganancia or 0), color, max_valor)
+            )
+
+    if barras_ganancia_ruta:
+        grafica_barras = ft.Container(
+            height=145,
+            alignment=ft.Alignment(0, 1),
+            content=ft.Row(
+                alignment=ft.MainAxisAlignment.SPACE_EVENLY,
+                vertical_alignment=ft.CrossAxisAlignment.END,
+                scroll=ft.ScrollMode.AUTO,
+                controls=barras_ganancia_ruta,
+            ),
+        )
+    else:
+        grafica_barras = ft.Container(
+            height=145,
+            alignment=ft.Alignment(0, 0),
+            content=ft.Text(
+                "Aún no hay viajes con pasajeros y tarifa\npara calcular ganancias.",
+                size=11,
+                color="#94A3B8",
+                text_align=ft.TextAlign.CENTER,
+            ),
+        )
 
     seccion_desempeno = ft.Container(
         expand=True,
@@ -285,7 +328,7 @@ def vista_menu_principal(page: ft.Page, ir_a):
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 ft.Text(
-                    "Desempeño semanal de rutas",
+                    "Ganancia por ruta",
                     size=14,
                     weight=ft.FontWeight.W_500,
                     color="#1E293B",
@@ -298,19 +341,10 @@ def vista_menu_principal(page: ft.Page, ir_a):
                             ft.Container(
                                 width=8,
                                 height=8,
-                                bgcolor="#3B92F6",
-                                border_radius=4,
-                            ),
-                            ft.Text("Retrasos", size=10, color="#64748B"),
-                        ]),
-                        ft.Row([
-                            ft.Container(
-                                width=8,
-                                height=8,
                                 bgcolor="#10B981",
                                 border_radius=4,
                             ),
-                            ft.Text("Ganancias", size=10, color="#64748B"),
+                            ft.Text("Ganancias (pasajeros x tarifa)", size=10, color="#64748B"),
                         ]),
                     ],
                 ),
@@ -402,6 +436,7 @@ def vista_menu_principal(page: ft.Page, ir_a):
                 padding=ft.Padding(25, 15, 25, 20),
                 content=ft.Column(
                     spacing=22,
+                    scroll=ft.ScrollMode.AUTO,
                     controls=[
                         ft.Row(
                             alignment=ft.MainAxisAlignment.CENTER,
@@ -417,7 +452,8 @@ def vista_menu_principal(page: ft.Page, ir_a):
                         ft.Row(
                             alignment=ft.MainAxisAlignment.CENTER,
                             spacing=25,
-                            controls=[kpi_unidades, kpi_choferes, kpi_viajes],
+                            wrap=True,
+                            controls=[kpi_unidades, kpi_choferes, kpi_viajes, kpi_ganancias],
                         ),
                         ft.Container(height=10),
                         ft.Row(
