@@ -1,7 +1,7 @@
 from dao.usuario_dao import UsuarioDAO
 import flet as ft
 
-def vista_login(page: ft.Page, ir_a):  
+def vista_login(page: ft.Page, ir_a):
     # --- CAMPOS DE ENTRADA ---
     txt_email = ft.TextField(
         label="Correo electronico",
@@ -27,8 +27,11 @@ def vista_login(page: ft.Page, ir_a):
 
     # --- LÓGICA DE LOGIN ---
     def procesar_login(e):
-        correo = txt_email.value.strip()
-        contrasena = txt_password.value.strip()
+        # Normalizamos igual que en el registro: sin espacios y correo en minúsculas
+        correo = (txt_email.value or "").strip().lower()
+        contrasena = (txt_password.value or "").strip()
+
+        print(f"[LOGIN] Intentando con correo={correo!r} | longitud_contrasena={len(contrasena)}")
 
         if not correo or not contrasena:
             snack = ft.SnackBar(
@@ -45,6 +48,8 @@ def vista_login(page: ft.Page, ir_a):
             usuario = dao.login(correo, contrasena)
 
             if usuario is not None:
+                print(f"[LOGIN] Éxito. Usuario id={usuario.id}, nombre={usuario.nombre}")
+
                 # Guardamos el objeto usuario directamente en el objeto page (100% compatible)
                 page.usuario_actual = usuario
 
@@ -59,6 +64,7 @@ def vista_login(page: ft.Page, ir_a):
                 # Redirección al Menú Principal
                 ir_a("menu_principal")
             else:
+                print("[LOGIN] Falló: dao.login() devolvió None (correo no existe o contraseña no coincide)")
                 snack = ft.SnackBar(
                     content=ft.Text("Correo o contraseña incorrectos"),
                     bgcolor="red"
@@ -68,7 +74,7 @@ def vista_login(page: ft.Page, ir_a):
                 page.update()
 
         except Exception as ex:
-            print("Error en login:", ex)
+            print("[LOGIN] Error en login:", repr(ex))
             snack = ft.SnackBar(
                 content=ft.Text("Error al conectar con la base de datos"),
                 bgcolor="red"
@@ -82,8 +88,8 @@ def vista_login(page: ft.Page, ir_a):
         top=25,
         left=30,
         content=ft.Image(
-            src="logo_uniruta.png", 
-            width=130, 
+            src="logo_uniruta.png",
+            width=130,
             fit="contain"
         )
     )
@@ -102,9 +108,9 @@ def vista_login(page: ft.Page, ir_a):
                     bgcolor="#2B5B84"
                 ),
                 ft.Text(
-                    "Bienvenido de\nnuevo!", 
-                    size=48, 
-                    weight=ft.FontWeight.NORMAL, 
+                    "Bienvenido de\nnuevo!",
+                    size=48,
+                    weight=ft.FontWeight.NORMAL,
                     color="#2C3E50"
                 )
             ]
@@ -116,8 +122,8 @@ def vista_login(page: ft.Page, ir_a):
         left=30,
         bottom=20,
         content=ft.Image(
-            src="bailarines.png", 
-            width=360, 
+            src="bailarines.png",
+            width=360,
             fit="contain"
         )
     )
@@ -142,9 +148,9 @@ def vista_login(page: ft.Page, ir_a):
                 ft.Container(
                     alignment=ft.Alignment(0, 0),
                     content=ft.Text(
-                        "Iniciar sesión", 
-                        size=22, 
-                        weight=ft.FontWeight.BOLD, 
+                        "Iniciar sesión",
+                        size=22,
+                        weight=ft.FontWeight.BOLD,
                         color="#1B2559"
                     )
                 ),
@@ -154,8 +160,8 @@ def vista_login(page: ft.Page, ir_a):
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
                         ft.Checkbox(
-                            label="Recordarme", 
-                            value=False, 
+                            label="Recordarme",
+                            value=False,
                             fill_color={
                                 ft.ControlState.DEFAULT: "white",
                                 ft.ControlState.SELECTED: "#3B82F6",
@@ -176,7 +182,7 @@ def vista_login(page: ft.Page, ir_a):
                     width=380,
                     height=45,
                     style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-                    on_click=procesar_login, 
+                    on_click=procesar_login,
                 ),
                 ft.Row(
                     alignment=ft.MainAxisAlignment.CENTER,
@@ -194,24 +200,24 @@ def vista_login(page: ft.Page, ir_a):
 
     # --- CÍRCULOS Y DETALLES DE FONDO ---
     circulo_inferior_izq = ft.Container(
-        width=650, 
-        height=650, 
-        bgcolor="#52A1C1", 
-        border_radius=325, 
-        left=-180, 
+        width=650,
+        height=650,
+        bgcolor="#52A1C1",
+        border_radius=325,
+        left=-180,
         bottom=-180
     )
     circulo_superior_der = ft.Container(
-        width=650, 
-        height=650, 
-        bgcolor="#7CBAD0", 
-        border_radius=325, 
-        right=-100, 
+        width=650,
+        height=650,
+        bgcolor="#7CBAD0",
+        border_radius=325,
+        right=-100,
         top=-100
     )
     icono_bus_esquina = ft.Container(
-        right=30, 
-        bottom=20, 
+        right=30,
+        bottom=20,
         content=ft.Icon(ft.Icons.DIRECTIONS_BUS, size=45, color="#94A3B8")
     )
 

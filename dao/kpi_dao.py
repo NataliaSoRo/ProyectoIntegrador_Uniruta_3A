@@ -1,5 +1,6 @@
 from database.conexion import Conexion
 
+
 class KpiDAO:
     def obtener_resumen_kpis(self):
         conexion = Conexion.obtener_conexion()
@@ -9,13 +10,13 @@ class KpiDAO:
             "choferes_en_turno": 0,
             "total_choferes": 0,
             "viajes_programados": 0,
-            "viajes_completados": 0
+            "viajes_completados": 0,
+            "ganancias_totales": 0.0,
         }
         if conexion is None:
             return datos
 
         try:
-            # 1. Tabla 'unidad'
             try:
                 with conexion.cursor() as cursor:
                     cursor.execute("SELECT COUNT(*) FROM unidad WHERE estatus = 'Activo';")
@@ -26,7 +27,6 @@ class KpiDAO:
                 conexion.rollback()
                 print("Aviso leyendo 'unidad':", e)
 
-            # 2. Tabla 'choferes'
             try:
                 with conexion.cursor() as cursor:
                     cursor.execute("SELECT COUNT(*) FROM choferes WHERE estatus = 'Activo';")
@@ -37,7 +37,6 @@ class KpiDAO:
                 conexion.rollback()
                 print("Aviso leyendo 'choferes':", e)
 
-            # 3. Tabla 'viaje'
             try:
                 with conexion.cursor() as cursor:
                     cursor.execute("SELECT COUNT(*) FROM viaje WHERE estatus = 'Programado';")
@@ -48,6 +47,24 @@ class KpiDAO:
                 conexion.rollback()
                 print("Aviso leyendo 'viaje':", e)
 
+            # Ganancias generales: suma de (pasajeros * tarifa) de cada viaje
+            try:
+                with conexion.cursor() as cursor:
+                    sql_ganancias = """
+                        SELECT COALESCE(SUM(v.pasajeros::numeric * r.tarifa), 0)
+                        FROM viaje v
+                        JOIN ruta r ON v.id_ruta = r.id
+                        WHERE v.pasajeros IS NOT NULL
+                          AND v.pasajeros::text ~ '^[0-9]+$'
+                          AND r.tarifa IS NOT NULL;
+                    """
+                    cursor.execute(sql_ganancias)
+                    resultado = cursor.fetchone()[0]
+                    datos["ganancias_totales"] = float(resultado) if resultado else 0.0
+            except Exception as e:
+                conexion.rollback()
+                print("Aviso calculando ganancias:", e)
+
         except Exception as ex:
             print("Aviso general en KpiDAO:", ex)
         finally:
@@ -55,15 +72,45 @@ class KpiDAO:
 
         return datos
 
+    def obtener_ganancias_por_ruta(self):
+        """Devuelve lista de tuplas (nombre_ruta, ganancia_total),
+        donde ganancia_total = suma de (pasajeros * tarifa) de todos
+        los viajes de esa ruta."""
+        conexion = Conexion.obtener_conexion()
+        resultados = []
+        if conexion is None:
+            return resultados
+
+        try:
+            with conexion.cursor() as cursor:
+                sql = """
+                    SELECT r.nombre AS ruta, COALESCE(SUM(v.pasajeros::numeric * r.tarifa), 0) AS ganancia
+                    FROM viaje v
+                    JOIN ruta r ON v.id_ruta = r.id
+                    WHERE v.pasajeros IS NOT NULL
+                      AND v.pasajeros::text ~ '^[0-9]+$'
+                      AND r.tarifa IS NOT NULL
+                    GROUP BY r.nombre
+                    ORDER BY ganancia DESC;
+                """
+                cursor.execute(sql)
+                resultados = cursor.fetchall()
+        except Exception as e:
+            conexion.rollback()
+            print("Aviso obteniendo ganancias por ruta:", e)
+        finally:
+            conexion.close()
+
+        return resultados
+
     def obtener_prioridades(self):
         conexion = Conexion.obtener_conexion()
         lista_prioridades = []
-        
+
         if conexion is None:
             return lista_prioridades
 
         try:
-            # 1. Alertas de Choferes
             try:
                 with conexion.cursor() as cursor:
                     sql_choferes = """
@@ -81,7 +128,6 @@ class KpiDAO:
                 conexion.rollback()
                 print("Aviso prioridades choferes:", e)
 
-            # 2. Alertas de Unidades (usando comillas dobles para "No_economico")
             try:
                 with conexion.cursor() as cursor:
                     sql_unidad = """
@@ -98,7 +144,6 @@ class KpiDAO:
                 conexion.rollback()
                 print("Aviso prioridades unidad:", e)
 
-            # 3. Alertas de Viajes
             try:
                 with conexion.cursor() as cursor:
                     sql_viaje = """

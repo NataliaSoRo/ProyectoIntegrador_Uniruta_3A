@@ -31,6 +31,7 @@ def vista_choferes(page: ft.Page, ir_a):
 
     # Variables de estado para controlar si editamos o creamos
     id_chofer_edicion = None
+    foto_chofer_actual = None
 
     # Usuario de sesión
     usuario = getattr(page, "usuario_actual", None)
@@ -56,7 +57,56 @@ def vista_choferes(page: ft.Page, ir_a):
     def abrir_calendario(e):
         abrir_dialogo(date_picker)
 
-    # --- SNACKBAR DE ÉXITO ---
+    # --- FILE PICKER (FOTO DEL CHOFER) ---
+    # Compatibilidad con Flet 1.0+ (FilePicker es un "service": vive en
+    # page.services, pick_files() es async y devuelve los archivos
+    # directamente; ya no existen on_result ni FilePickerResultEvent) y con
+    # versiones anteriores a 1.0 (FilePicker vive en page.overlay y usa el
+    # callback on_result con FilePickerResultEvent).
+    file_picker = ft.FilePicker()
+    usa_api_v1 = hasattr(page, "services")
+
+    def _procesar_archivo_foto(ruta_foto):
+        nonlocal foto_chofer_actual
+        if not ruta_foto:
+            mostrar_alerta_modal(
+                "No se pudo obtener la ruta de la imagen en este entorno "
+                "(modo web sin subida configurada)"
+            )
+            return
+        foto_chofer_actual = ruta_foto
+        avatar_imagen.src = ruta_foto
+        avatar_imagen.visible = True
+        avatar_icono.visible = False
+        avatar_imagen.update()
+        avatar_icono.update()
+
+    if usa_api_v1:
+        page.services.append(file_picker)
+    else:
+        def al_seleccionar_foto(e):
+            if e.files and len(e.files) > 0:
+                _procesar_archivo_foto(e.files[0].path)
+
+        file_picker.on_result = al_seleccionar_foto
+        if file_picker not in page.overlay:
+            page.overlay.append(file_picker)
+
+    async def abrir_selector_foto(e):
+        if usa_api_v1:
+            archivos = await file_picker.pick_files(
+                allow_multiple=False,
+                file_type=ft.FilePickerFileType.IMAGE,
+            )
+            if archivos:
+                _procesar_archivo_foto(archivos[0].path)
+        else:
+            file_picker.pick_files(
+                allow_multiple=False,
+                file_type=ft.FilePickerFileType.IMAGE,
+            )
+
+    # --- SNACKBAR DE ÉXITO / ERROR (mismo estilo que viajes) ---
     snack_exito = ft.SnackBar(
         content=ft.Row(
             controls=[
@@ -93,13 +143,60 @@ def vista_choferes(page: ft.Page, ir_a):
             traceback.print_exc()
 
     def _mostrar_snack():
+        # Reubica el snackbar al final del overlay para que quede por
+        # encima del modal (que también vive en el overlay), evitando
+        # que la alerta quede oculta detrás del AlertDialog abierto.
+        if snack_exito in page.overlay:
+            page.overlay.remove(snack_exito)
+        page.overlay.append(snack_exito)
+
         if hasattr(page, "open"):
             page.open(snack_exito)
         else:
-            if snack_exito not in page.overlay:
-                page.overlay.append(snack_exito)
             snack_exito.open = True
             page.update()
+
+    def mostrar_alerta_modal(mensaje, es_error=True):
+        """Alerta tipo diálogo para usarse MIENTRAS el modal de
+        Ingresar/Editar chofer está abierto. Un SnackBar nunca se
+        dibuja por encima de un AlertDialog abierto en Flet, así que
+        para esos casos usamos otro AlertDialog (que sí se apila por
+        encima) en vez del snackbar."""
+        color_icono = "#EF4444" if es_error else "#10B981"
+        icono = ft.Icons.ERROR_OUTLINE if es_error else ft.Icons.CHECK_CIRCLE
+
+        dialogo_alerta = ft.AlertDialog(
+            bgcolor="white",
+            shape=ft.RoundedRectangleBorder(radius=12),
+            content=ft.Container(
+                width=380,
+                padding=ft.Padding(15, 20, 15, 10),
+                content=ft.Column(
+                    tight=True,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=15,
+                    controls=[
+                        ft.Icon(icono, color=color_icono, size=40),
+                        ft.Text(
+                            mensaje,
+                            size=14,
+                            color="#0F172A",
+                            weight=ft.FontWeight.BOLD,
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.ElevatedButton(
+                            "Entendido",
+                            bgcolor="#6366F1",
+                            color="white",
+                            width=180,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20)),
+                            on_click=lambda e: cerrar_dialogo(dialogo_alerta),
+                        ),
+                    ],
+                ),
+            ),
+        )
+        abrir_dialogo(dialogo_alerta)
 
     # --- LÓGICA DE DIÁLOGOS DE CABECERA (HEADER) ---
     def cerrar_sesion(e):
@@ -253,20 +350,47 @@ def vista_choferes(page: ft.Page, ir_a):
     # --- COMPONENTES DEL FORMULARIO Y MODAL ---
     txt_titulo_modal = ft.Text("Ingresar chofer", size=22, weight=ft.FontWeight.BOLD, color="#0F172A")
 
-    txt_foto_inner = ft.TextField(
-        hint_text="EJ. foto_chofer.png",
-        border=ft.InputBorder.NONE,
-        content_padding=ft.Padding(10, 0, 10, 0),
-        text_size=12,
-        expand=True,
+    # Campo de foto: cuadro clickeable con ícono de usuario + insignia "+".
+    # Al hacer click se abre el selector de imágenes; una vez elegida, la
+    # imagen reemplaza al ícono dentro del mismo cuadro.
+    avatar_icono = ft.Icon(ft.Icons.PERSON_ROUNDED, size=40, color="#94A3B8")
+
+    avatar_imagen = ft.Image(
+        src=None,
+        width=90,
+        height=90,
+        fit=ft.BoxFit.COVER,
+        border_radius=ft.BorderRadius(16, 16, 16, 16),
+        visible=False,
     )
+
     txt_foto = ft.Container(
-        height=40,
-        bgcolor="#F8FAFC",
-        border=ft.Border.all(1, "#CBD5E1"),
-        border_radius=8,
-        alignment=ft.Alignment(-1, 0),
-        content=txt_foto_inner,
+        width=90,
+        height=90,
+        bgcolor="#F1F5F9",
+        border=ft.Border.all(1.5, "#CBD5E1"),
+        border_radius=16,
+        alignment=ft.Alignment(0, 0),
+        clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+        tooltip="Seleccionar imagen",
+        on_click=abrir_selector_foto,
+        content=ft.Stack(
+            controls=[
+                avatar_imagen,
+                ft.Container(alignment=ft.Alignment(0, 0), content=avatar_icono),
+                ft.Container(
+                    right=-4,
+                    bottom=-4,
+                    width=26,
+                    height=26,
+                    bgcolor="#6366F1",
+                    border_radius=13,
+                    border=ft.Border.all(2, "white"),
+                    alignment=ft.Alignment(0, 0),
+                    content=ft.Icon(ft.Icons.ADD_ROUNDED, size=16, color="white"),
+                ),
+            ],
+        ),
     )
 
     txt_nombre_inner = ft.TextField(
@@ -401,10 +525,13 @@ def vista_choferes(page: ft.Page, ir_a):
     )
 
     def restablecer_formulario():
-        nonlocal id_chofer_edicion
+        nonlocal id_chofer_edicion, foto_chofer_actual
         id_chofer_edicion = None
+        foto_chofer_actual = None
         txt_titulo_modal.value = "Ingresar chofer"
-        txt_foto_inner.value = ""
+        avatar_imagen.src = None
+        avatar_imagen.visible = False
+        avatar_icono.visible = True
         txt_nombre_inner.value = ""
         dd_tipo_licencia_inner.value = None
         txt_vigencia_inner.value = ""
@@ -418,27 +545,20 @@ def vista_choferes(page: ft.Page, ir_a):
 
         print("[vista_choferes] guardar_chofer: click en Aceptar")
 
-        if not txt_nombre_inner.value or not str(txt_nombre_inner.value).strip():
-            mostrar_error("El nombre completo es obligatorio")
-            return
-        if not txt_no_licencia_inner.value or not str(txt_no_licencia_inner.value).strip():
-            mostrar_error("El número de licencia es obligatorio")
-            return
-        if not dd_tipo_licencia_inner.value:
-            mostrar_error("Selecciona el tipo de licencia")
-            return
-        if not txt_vigencia_inner.value:
-            mostrar_error("Selecciona la vigencia de la licencia")
-            return
-        if not txt_telefono_inner.value or not str(txt_telefono_inner.value).strip():
-            mostrar_error("El teléfono es obligatorio")
-            return
-        if not dd_estatus_inner.value:
-            mostrar_error("Selecciona el estatus del chofer")
+        campos_obligatorios = [
+            txt_nombre_inner.value,
+            txt_no_licencia_inner.value,
+            dd_tipo_licencia_inner.value,
+            txt_vigencia_inner.value,
+            txt_telefono_inner.value,
+            dd_estatus_inner.value,
+        ]
+        if not all(c and str(c).strip() for c in campos_obligatorios):
+            mostrar_alerta_modal("No hay ningún campo registrado")
             return
 
         if not Chofer or not dao:
-            mostrar_error("No hay conexión con la base de datos (revisa la consola/terminal)")
+            mostrar_alerta_modal("No hay conexión con la base de datos (revisa la consola/terminal)")
             return
 
         observaciones_valor = (
@@ -454,7 +574,7 @@ def vista_choferes(page: ft.Page, ir_a):
             licencia=str(txt_no_licencia_inner.value).strip(),
             tipo_licencia=dd_tipo_licencia_inner.value,
             vigen_licencia=txt_vigencia_inner.value,
-            foto=txt_foto_inner.value if txt_foto_inner.value else None,
+            foto=foto_chofer_actual if foto_chofer_actual else None,
             estatus=dd_estatus_inner.value,
             observaciones=observaciones_valor,
         )
@@ -472,7 +592,7 @@ def vista_choferes(page: ft.Page, ir_a):
         except Exception:
             print(f"[vista_choferes] ERROR al guardar/actualizar en BD:")
             traceback.print_exc()
-            mostrar_error("Ocurrió un error al guardar el chofer (revisa la consola/terminal)")
+            mostrar_alerta_modal("Ocurrió un error al guardar el chofer (revisa la consola/terminal)")
             return
 
         try:
@@ -507,8 +627,14 @@ def vista_choferes(page: ft.Page, ir_a):
                         ft.Column(
                             expand=1,
                             controls=[
-                                ft.Text("Ruta/Nombre de Imagen", size=11, color="#475569"),
-                                txt_foto,
+                                ft.Column(
+                                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                    spacing=6,
+                                    controls=[
+                                        ft.Text("Foto del chofer", size=11, color="#475569"),
+                                        txt_foto,
+                                    ],
+                                ),
                                 ft.Text("No. licencia", size=11, color="#475569"),
                                 txt_no_licencia,
                                 ft.Text("Estatus", size=11, color="#475569"),
@@ -553,7 +679,7 @@ def vista_choferes(page: ft.Page, ir_a):
         abrir_dialogo(modal_agregar)
 
     def abrir_modal_editar(chofer_item):
-        nonlocal id_chofer_edicion
+        nonlocal id_chofer_edicion, foto_chofer_actual
         id_chofer_edicion = obtener_valor(chofer_item, "id")
 
         txt_titulo_modal.value = "Editar chofer"
@@ -564,7 +690,15 @@ def vista_choferes(page: ft.Page, ir_a):
         txt_vigencia_inner.value = str(obtener_valor(chofer_item, "vigen_licencia", ""))
 
         foto_val = obtener_valor(chofer_item, "foto", "")
-        txt_foto_inner.value = str(foto_val) if foto_val else ""
+        foto_chofer_actual = str(foto_val) if foto_val else None
+        if foto_val:
+            avatar_imagen.src = str(foto_val)
+            avatar_imagen.visible = True
+            avatar_icono.visible = False
+        else:
+            avatar_imagen.src = None
+            avatar_imagen.visible = False
+            avatar_icono.visible = True
 
         dd_estatus_inner.value = str(obtener_valor(chofer_item, "estatus", "Activo"))
 
@@ -864,9 +998,19 @@ def vista_choferes(page: ft.Page, ir_a):
                 celda_observaciones = ft.Text("-", size=11, color="#CBD5E1")
 
             if foto_ch and str(foto_ch) not in ["-", "None", ""]:
-                avatar_content = ft.Image(src=str(foto_ch), fit=ft.BoxFit.COVER)
+                avatar_content = ft.Container(
+                    width=28,
+                    height=28,
+                    border_radius=14,
+                    clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+                    content=ft.Image(src=str(foto_ch), width=28, height=28, fit=ft.BoxFit.COVER),
+                )
             else:
-                avatar_content = ft.Icon(ft.Icons.PERSON, size=14, color="white")
+                avatar_content = ft.CircleAvatar(
+                    content=ft.Icon(ft.Icons.PERSON, size=14, color="white"),
+                    bgcolor="#94A3B8",
+                    radius=14,
+                )
 
             filas.append(
                 ft.DataRow(
@@ -875,11 +1019,7 @@ def vista_choferes(page: ft.Page, ir_a):
                         ft.DataCell(
                             ft.Row(
                                 [
-                                    ft.CircleAvatar(
-                                        content=avatar_content,
-                                        bgcolor="#94A3B8",
-                                        radius=14,
-                                    ),
+                                    avatar_content,
                                     ft.Text(str(nombre_ch), size=11, color="#1E293B", weight=ft.FontWeight.W_500),
                                 ],
                                 spacing=8,

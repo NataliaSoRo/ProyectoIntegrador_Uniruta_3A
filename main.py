@@ -13,6 +13,7 @@ from views.rutas import vista_rutas
 from views.unidades import vista_unidades
 from views.viajes import vista_viajes
 from views.vista_perfil import vista_perfil
+from views.ganancias import vista_ganancias
 
 def main(page: ft.Page):
     page.title = "UniRuta"
@@ -41,7 +42,7 @@ def main(page: ft.Page):
             page.add(vista_viajes(page, ir_a))
         elif ruta == "choferes":
             page.add(vista_choferes(page, ir_a))
-        elif ruta == "unidades": 
+        elif ruta == "unidades":
             page.add(vista_unidades(page, ir_a))
         elif ruta == "rutas":
             page.add(vista_rutas(page, ir_a))
@@ -49,6 +50,8 @@ def main(page: ft.Page):
             page.add(vista_pagos(page, ir_a))
         elif ruta == "perfil":
             page.add(vista_perfil(page, ir_a, ruta_previa=ruta_previa))
+        elif ruta == "ganancias":
+            page.add(vista_ganancias(page, ir_a))
 
         page.update()
 

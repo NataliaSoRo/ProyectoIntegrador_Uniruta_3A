@@ -29,7 +29,7 @@ def vista_pagos(page: ft.Page, ir_a):
     nombre_usuario = getattr(usuario, "nombre", "Natalia Sosa Rodriguez") if usuario else "Natalia Sosa Rodriguez"
     rol_usuario = getattr(usuario, "rol", "Administrador") if usuario else "Administrador"
 
-    # --- SNACKBAR DE ÉXITO / ERROR ---
+    # --- SNACKBAR DE ÉXITO / ERROR (mismo estilo que choferes) ---
     snack_exito = ft.SnackBar(
         content=ft.Row(
             controls=[
@@ -46,25 +46,80 @@ def vista_pagos(page: ft.Page, ir_a):
         page.overlay.append(snack_exito)
 
     def mostrar_exito(mensaje):
-        snack_exito.content.controls[1].value = mensaje
-        snack_exito.bgcolor = "#10B981"
-        snack_exito.content.controls[0].name = ft.Icons.CHECK_CIRCLE
-        _mostrar_snack()
+        try:
+            snack_exito.content.controls[1].value = mensaje
+            snack_exito.bgcolor = "#10B981"
+            snack_exito.content.controls[0].name = ft.Icons.CHECK_CIRCLE
+            _mostrar_snack()
+        except Exception as ex:
+            print(f"[vista_pagos] Error al mostrar snackbar de éxito: {ex}")
+            traceback.print_exc()
 
     def mostrar_error(mensaje):
-        snack_exito.content.controls[1].value = mensaje
-        snack_exito.bgcolor = "#EF4444"
-        snack_exito.content.controls[0].name = ft.Icons.ERROR_OUTLINE
-        _mostrar_snack()
+        try:
+            snack_exito.content.controls[1].value = mensaje
+            snack_exito.bgcolor = "#EF4444"
+            snack_exito.content.controls[0].name = ft.Icons.ERROR_OUTLINE
+            _mostrar_snack()
+        except Exception as ex:
+            print(f"[vista_pagos] Error al mostrar snackbar de error: {ex}")
+            traceback.print_exc()
 
     def _mostrar_snack():
+        # Reubica el snackbar al final del overlay para que quede por
+        # encima del modal (que también vive en el overlay), evitando
+        # que la alerta quede oculta detrás del AlertDialog abierto.
+        if snack_exito in page.overlay:
+            page.overlay.remove(snack_exito)
+        page.overlay.append(snack_exito)
+
         if hasattr(page, "open"):
             page.open(snack_exito)
         else:
-            if snack_exito not in page.overlay:
-                page.overlay.append(snack_exito)
             snack_exito.open = True
             page.update()
+
+    def mostrar_alerta_modal(mensaje, es_error=True):
+        """Alerta tipo diálogo para usarse MIENTRAS el modal de
+        Ingresar/Editar pago está abierto. Un SnackBar nunca se
+        dibuja por encima de un AlertDialog abierto en Flet, así que
+        para esos casos usamos otro AlertDialog (que sí se apila por
+        encima) en vez del snackbar."""
+        color_icono = "#EF4444" if es_error else "#10B981"
+        icono = ft.Icons.ERROR_OUTLINE if es_error else ft.Icons.CHECK_CIRCLE
+
+        dialogo_alerta = ft.AlertDialog(
+            bgcolor="white",
+            shape=ft.RoundedRectangleBorder(radius=12),
+            content=ft.Container(
+                width=380,
+                padding=ft.Padding(15, 20, 15, 10),
+                content=ft.Column(
+                    tight=True,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=15,
+                    controls=[
+                        ft.Icon(icono, color=color_icono, size=40),
+                        ft.Text(
+                            mensaje,
+                            size=14,
+                            color="#0F172A",
+                            weight=ft.FontWeight.BOLD,
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.ElevatedButton(
+                            "Entendido",
+                            bgcolor="#6366F1",
+                            color="white",
+                            width=180,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20)),
+                            on_click=lambda e: cerrar_dialogo(dialogo_alerta),
+                        ),
+                    ],
+                ),
+            ),
+        )
+        abrir_dialogo(dialogo_alerta)
 
     # --- LÓGICA DE DIÁLOGOS DE CABECERA (HEADER) ---
     def cerrar_sesion(e):
@@ -394,18 +449,20 @@ def vista_pagos(page: ft.Page, ir_a):
     def guardar_pago(e):
         nonlocal id_pago_edicion
 
+        print("[vista_pagos] guardar_pago: click en Aceptar")
+
         # --- Validación de campos obligatorios ---
-        if not txt_id_viaje_inner.value or not str(txt_id_viaje_inner.value).strip():
-            mostrar_error("El ID de viaje es obligatorio")
-            return
-        if not dd_chofer_inner.value:
-            mostrar_error("Selecciona el chofer asignado")
-            return
-        if not dd_metodo_pago_inner.value:
-            mostrar_error("Selecciona el método de pago")
-            return
-        if not dd_periodo_pago_inner.value:
-            mostrar_error("Selecciona el periodo de pago")
+        # Este error ocurre MIENTRAS el modal está abierto, así que usamos
+        # mostrar_alerta_modal (AlertDialog) en vez del snackbar, porque un
+        # SnackBar no se dibuja por encima de un AlertDialog abierto.
+        campos_obligatorios = [
+            txt_id_viaje_inner.value,
+            dd_chofer_inner.value,
+            dd_metodo_pago_inner.value,
+            dd_periodo_pago_inner.value,
+        ]
+        if not all(c and str(c).strip() for c in campos_obligatorios):
+            mostrar_alerta_modal("Es obligatorio llenar todos los datos")
             return
 
         try:
@@ -416,14 +473,13 @@ def vista_pagos(page: ft.Page, ir_a):
             pago_final = float(txt_pago_final_inner.value or 0)
             total_acumulado = float(txt_total_acumulado_inner.value or 0)
         except ValueError:
-            mostrar_error("ID de viaje y montos deben ser numéricos")
+            mostrar_alerta_modal("ID de viaje y montos deben ser numéricos")
             return
 
         if not Pago or not dao:
-            mostrar_error("No hay conexión con la base de datos (revisa la consola/terminal)")
+            mostrar_alerta_modal("No hay conexión con la base de datos (revisa la consola/terminal)")
             return
 
-        exito = False
         mensaje = ""
 
         try:
@@ -441,7 +497,6 @@ def vista_pagos(page: ft.Page, ir_a):
                     periodo_pago=dd_periodo_pago_inner.value,
                 )
                 dao.insertar(pago_obj)
-                exito = True
                 mensaje = "Pago ingresado con éxito"
             else:
                 pago_obj = Pago(
@@ -456,19 +511,24 @@ def vista_pagos(page: ft.Page, ir_a):
                     periodo_pago=dd_periodo_pago_inner.value,
                 )
                 dao.actualizar(pago_obj)
-                exito = True
                 mensaje = "Pago actualizado con éxito"
-        except Exception as ex:
-            print(f"[vista_pagos] Error al guardar/actualizar: {ex}")
-            mostrar_error("Ocurrió un error al guardar el pago (revisa la consola/terminal)")
+            print(f"[vista_pagos] guardar_pago: guardado en BD OK -> {mensaje}")
+        except Exception:
+            print("[vista_pagos] ERROR al guardar/actualizar en BD:")
+            traceback.print_exc()
+            mostrar_alerta_modal("Ocurrió un error al guardar el pago (revisa la consola/terminal)")
             return
 
-        restablecer_formulario()
-        cerrar_dialogo(modal_agregar)
-        cargar_datos_tabla()
+        try:
+            restablecer_formulario()
+            cerrar_dialogo(modal_agregar)
+            cargar_datos_tabla()
+            print("[vista_pagos] guardar_pago: UI refrescada OK")
+        except Exception:
+            print("[vista_pagos] ERROR al refrescar la UI tras guardar:")
+            traceback.print_exc()
 
-        if exito:
-            mostrar_exito(mensaje)
+        mostrar_exito(mensaje)
 
     def cancelar_modal(e):
         restablecer_formulario()
@@ -569,13 +629,11 @@ def vista_pagos(page: ft.Page, ir_a):
 
                 dao.eliminar(id_pago)
                 print(f"[vista_pagos] dao.eliminar({id_pago!r}) ejecutado sin excepción")
-                cargar_datos_tabla()
-                cerrar_dialogo(dialogo_eliminar)
-                mostrar_exito("Pago eliminado con éxito")
             except ValueError as ve:
                 print(f"[vista_pagos] No se pudo eliminar: {ve}")
                 cerrar_dialogo(dialogo_eliminar)
                 mostrar_error(str(ve))
+                return
             except Exception:
                 print("[vista_pagos] EXCEPCIÓN al eliminar:")
                 traceback.print_exc()
@@ -584,6 +642,17 @@ def vista_pagos(page: ft.Page, ir_a):
                 except Exception:
                     pass
                 mostrar_error("Ocurrió un error al eliminar el pago (revisa la consola/terminal)")
+                return
+
+            try:
+                cerrar_dialogo(dialogo_eliminar)
+                cargar_datos_tabla()
+                print("[vista_pagos] borrar_y_cerrar: UI refrescada OK")
+            except Exception:
+                print("[vista_pagos] ERROR al refrescar la UI tras eliminar:")
+                traceback.print_exc()
+
+            mostrar_exito("Pago eliminado con éxito")
 
         dialogo_eliminar = ft.AlertDialog(
             bgcolor="white",
