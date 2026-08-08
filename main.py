@@ -1,4 +1,3 @@
-
 import sys
 from pathlib import Path
 import flet as ft
@@ -14,7 +13,6 @@ from views.rutas import vista_rutas
 from views.unidades import vista_unidades
 from views.viajes import vista_viajes
 from views.vista_perfil import vista_perfil
-
 
 def main(page: ft.Page):
     page.title = "UniRuta"

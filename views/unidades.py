@@ -8,6 +8,8 @@ def vista_unidades(page: ft.Page, ir_a):
 
     dao = UnidadDAO()
 
+    id_unidad_edicion = None
+
     # Usuario actual de la sesión
     usuario = getattr(page, "usuario_actual", None)
     nombre_usuario = (
@@ -395,7 +397,7 @@ def vista_unidades(page: ft.Page, ir_a):
                         controls=[
                             ft.ElevatedButton(
                                 content=ft.Text(
-                                    "Ver información",
+                                    "Editar",
                                     color="white",
                                     size=10,
                                     weight=ft.FontWeight.BOLD,
@@ -405,9 +407,7 @@ def vista_unidades(page: ft.Page, ir_a):
                                     padding=ft.Padding(10, 6, 10, 6),
                                     shape=ft.RoundedRectangleBorder(radius=6),
                                 ),
-                                on_click=lambda e, uid=id_u: print(
-                                    f"Ver información de unidad {uid}"
-                                ),
+                                on_click=lambda e, unidad=u: editar_unidad(unidad)
                             ),
                             ft.Container(
                                 width=32,
@@ -478,6 +478,10 @@ def vista_unidades(page: ft.Page, ir_a):
         page.update()
 
     # --- FORMULARIO Y MODAL AGREGAR UNIDAD ---
+
+    # ID de la unidad que estamos editando
+    id_unidad_edicion = None
+
     txt_economico = ft.TextField(
         label="No. Económico", hint_text="Ej. ECO-001", height=48, text_size=12
     )
@@ -530,7 +534,11 @@ def vista_unidades(page: ft.Page, ir_a):
                 estatus="Activo",
             )
 
-            dao.insertar(unidad)
+            if id_unidad_edicion is None:
+                dao.insertar(unidad)
+            else:
+                unidad.id = id_unidad_edicion
+                dao.actualizar(unidad)
 
             modal_agregar.open = False
             limpiar_formulario()
@@ -541,6 +549,12 @@ def vista_unidades(page: ft.Page, ir_a):
             lbl_error.value = f"Error al guardar: {str(ex)}"
             page.update()
 
+    txt_titulo_modal = ft.Text(
+        "Ingresar unidad",
+        size=20,
+        weight=ft.FontWeight.BOLD,
+    )
+
     modal_agregar = ft.AlertDialog(
         content=ft.Container(
             width=400,
@@ -548,9 +562,7 @@ def vista_unidades(page: ft.Page, ir_a):
                 tight=True,
                 spacing=12,
                 controls=[
-                    ft.Text(
-                        "Ingresar unidad", size=20, weight=ft.FontWeight.BOLD
-                    ),
+                    txt_titulo_modal,
                     txt_economico,
                     txt_placas,
                     txt_modelo,
@@ -580,11 +592,42 @@ def vista_unidades(page: ft.Page, ir_a):
         )
     )
 
-    def abrir_modal_agregar(e):
-        limpiar_formulario()
-        # Se añade directamente a la capa superpuesta (overlay) de Flet
+    def editar_unidad(unidad):
+        global id_unidad_edicion
+
+        id_unidad_edicion = unidad.id
+        txt_titulo_modal.value = "Editar unidad"
+
+        txt_economico.value = str(unidad.noeconomico or "")
+        txt_placas.value = str(unidad.placas or "")
+        txt_modelo.value = str(unidad.modelo or "")
+        txt_marca.value = str(unidad.marca or "")
+        txt_anio.value = str(unidad.año or "")
+        txt_kilometraje.value = str(unidad.kilometraje or "")
+
         if modal_agregar not in page.overlay:
             page.overlay.append(modal_agregar)
+
+        modal_agregar.open = True
+        page.update()
+
+    def abrir_modal_agregar(e):
+        limpiar_formulario()
+        txt_titulo_modal.value = "Ingresar unidad"
+
+        if modal_agregar not in page.overlay:
+            page.overlay.append(modal_agregar)
+
+        modal_agregar.open = True
+        page.update()
+
+    def abrir_modal_agregar(e):
+        limpiar_formulario()
+        txt_titulo_modal.value = "Ingresar unidad"
+
+        if modal_agregar not in page.overlay:
+            page.overlay.append(modal_agregar)
+
         modal_agregar.open = True
         page.update()
 
